@@ -11,7 +11,7 @@
 #include <string_view>
 #include <vector>
 
-#include "parser.hpp"
+#include "yoda.hpp"
 
 // namespace {
 
@@ -21,11 +21,13 @@
 
 int main() {
 
-  auto any = yoda::alt(yoda::any, yoda::eof);
+  auto p = yoda::star(yoda::any);
 
-  auto got = yoda::parse(any, "");
+  auto got = yoda::parse(p, "890");
 
-  // std::println("{}", got);
+  for (auto &&c : got) {
+    std::println("{}", c);
+  }
 
   // std::println("{} {}", a.value.value(), a.rest);
 
