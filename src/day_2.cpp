@@ -24,13 +24,15 @@ int main() {
 
   using namespace yoda;
 
-  auto p = rep(lit('8'), 1);
+  // number<int>;
 
-  auto got = yoda::parse(p, "880");
+  auto p = seq(star(number<int>), eof);
 
-  for (auto &&c : got) {
-    std::println("{}", c);
-  }
+  auto got = yoda::parse(p, "880 fly");
+
+  // for (auto &&c : got) {
+  //   std::println("{}", c);
+  // }
 
   // std::println("{} {}", a.value.value(), a.rest);
 

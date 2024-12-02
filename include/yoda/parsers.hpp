@@ -1,6 +1,7 @@
 #ifndef A75B5447_AA14_4DF3_8767_82A33677EC06
 #define A75B5447_AA14_4DF3_8767_82A33677EC06
 
+#include <charconv>
 #include <concepts>
 #include <expected>
 #include <format>
@@ -15,6 +16,8 @@
 #include "yoda/core.hpp"
 
 namespace yoda {
+
+// ====== Atomic ======
 
 /**
  * @brief The noop parser, consumes nothing.
@@ -36,7 +39,7 @@ constexpr auto any = [](std::string_view sv) -> result<char> {
 /**
  * @brief The literal parser, consumes a specific character.
  */
-constexpr auto lit = [](char c) {
+constexpr auto lit = [](char c) -> parser_of<char> auto {
   return [c](std::string_view sv) -> result<char> {
     if (sv.empty()) {
       return {detail::err("Expected '{}' but got EoF", c), {}};
@@ -56,6 +59,36 @@ constexpr auto eof = [](std::string_view sv) -> result<std::monostate> {
   }
   return {detail::err("Expected EoF but got '{}'", sv), sv};
 };
+
+// ====== Combined ======
+
+namespace detail {
+
+template <typename T>
+constexpr auto number_impl(auto extra) -> parser_of<T> auto {
+  return [extra](std::string_view sv) -> result<int> {
+    //
+    T val = 0;
+
+    char const *beg = sv.data();
+    char const *end = sv.data() + sv.size();
+
+    auto [p, ec] = std::from_chars(beg, end, val, extra);
+
+    if (ec == std::errc{}) {
+      return {val, {p, end}};
+    }
+
+    constexpr std::string_view fmt = "Failed to pass integer, consumed, {}";
+
+    return {detail::err(fmt, std::string_view{beg, p}), sv};
+  };
+}
+
+} // namespace detail
+
+template <std::integral T, int Base = 10>
+constexpr auto number = detail::number_impl<T>(Base);
 
 } // namespace yoda
 

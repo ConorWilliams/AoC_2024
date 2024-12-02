@@ -197,21 +197,21 @@ struct rep_impl {
 /**
  * @brief Kleene star combinator.
  */
-constexpr auto star = [](auto p) -> parser auto {
+constexpr auto star = [](parser auto p) -> parser auto {
   return detail::rep_impl{}(p, 0, std::numeric_limits<std::size_t>::max());
 };
 
 /**
  * @brief Kleene plus combinator.
  */
-constexpr auto plus = [](auto p) -> parser auto {
+constexpr auto plus = [](parser auto p) -> parser auto {
   return detail::rep_impl{}(p, 1, std::numeric_limits<std::size_t>::max());
 };
 
 /**
  * @brief Repetition combinator.
  */
-constexpr auto rep = [](auto p, std::size_t n) -> parser auto {
+constexpr auto rep = [](parser auto p, std::size_t n) -> parser auto {
   return detail::rep_impl{}(p, n, n);
 };
 
