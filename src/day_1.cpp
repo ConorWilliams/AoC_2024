@@ -7,6 +7,8 @@
 #include <string>
 #include <vector>
 
+namespace {
+
 struct Parsed {
   std::vector<int> lhs;
   std::vector<int> rhs;
@@ -35,6 +37,8 @@ auto parse(std::string const &fname) -> Parsed {
 }
 
 namespace views = std::ranges::views;
+
+} // namespace
 
 int main() {
 
