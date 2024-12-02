@@ -1,4 +1,4 @@
-cmake -S . -B build && cmake --build build -j 4
+cmake --preset=dev && cmake --build --preset=dev
 
 if [ $? -ne 0 ]; then
     echo "CMake failed"
