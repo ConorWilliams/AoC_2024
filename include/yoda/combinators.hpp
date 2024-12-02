@@ -14,23 +14,26 @@ struct seq_impl {
    * @brief Base case
    */
   template <parser P, parser Q> static constexpr auto operator()(P p, Q q) {
-    using R = result<std::tuple<parser_t<P>, parser_t<Q>>>;
+    //
+    using Tup = std::tuple<parser_t<P>, parser_t<Q>>;
+
+    using R = result<Tup>;
 
     return [p = std::move(p), q = std::move(q)](std::string_view sv) -> R {
       //
       auto lhs = p(sv);
 
       if (!lhs) {
-        return {lhs.error(), sv};
+        return {std::unexpected(lhs.error()), sv};
       }
 
       auto rhs = q(lhs.rest);
 
       if (!rhs) {
-        return {rhs.error(), sv};
+        return {std::unexpected(rhs.error()), lhs.rest};
       }
 
-      return {{lhs.value(), rhs.value()}, rhs.rest};
+      return {Tup{std::move(lhs).value(), std::move(rhs).value()}, rhs.rest};
     };
   }
 
@@ -46,39 +49,58 @@ struct seq_impl {
 } // namespace detail
 
 /**
- * @brief Sequence combinator.
+ * @brief Sequence multiple combinator (left to right).
  */
 constexpr detail::seq_impl seq = {};
 
-constexpr auto alt = []<parser P, parser Q>(P p, Q q) {
-  //
-  using RQ = parser_t<Q>;
-  using RP = parser_t<P>;
+namespace detail {
 
-  constexpr bool same = std::is_same_v<RP, RQ>;
-
-  using R = result<std::conditional_t<same, RP, std::variant<RP, RQ>>>;
-
-  return [p = std::move(p), q = std::move(q)](std::string_view sv) -> R {
+struct alt_impl {
+  template <parser P, parser Q> constexpr auto operator()(P p, Q q) {
     //
-    auto lhs = p(sv);
+    using RQ = parser_t<Q>;
+    using RP = parser_t<P>;
 
-    if (lhs) {
-      return {std::move(lhs).value(), lhs.rest};
-    }
+    constexpr bool same = std::is_same_v<RP, RQ>;
 
-    auto rhs = q(sv);
+    using R = result<std::conditional_t<same, RP, std::variant<RP, RQ>>>;
 
-    if (rhs) {
-      return {std::move(rhs).value(), rhs.rest};
-    }
+    return [p = std::move(p), q = std::move(q)](std::string_view sv) -> R {
+      //
+      auto lhs = p(sv);
 
-    constexpr std::string_view fmt = "Both parsers failed with:\n\t{}\n\t{}";
+      if (lhs) {
+        return {std::move(lhs).value(), lhs.rest};
+      }
 
-    return {unexpected(std::format(fmt, lhs.error(), rhs.error())), sv};
-  };
+      auto rhs = q(sv);
+
+      if (rhs) {
+        return {std::move(rhs).value(), rhs.rest};
+      }
+
+      constexpr std::string_view fmt = "Both parsers failed with:\n\t{}\n\t{}";
+
+      return {unexpected(std::format(fmt, lhs.error(), rhs.error())), sv};
+    };
+  }
+
+  template <parser P, parser Q, parser... Ps>
+  constexpr auto operator()(P p, Q q, Ps... ps) {
+    return alt_impl{}(alt_impl{}(p, q), ps...);
+  }
 };
 
+} // namespace detail
+
+/**
+ * @brief Alternative multiple combinator (left to right).
+ */
+constexpr detail::alt_impl alt = {};
+
+/**
+ * @brief Kleene star combinator.
+ */
 constexpr auto star = []<parser P>(P p) {
   //
   using RP = parser_t<P>;
