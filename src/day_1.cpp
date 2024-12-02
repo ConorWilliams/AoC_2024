@@ -40,7 +40,7 @@ namespace views = std::ranges::views;
 
 } // namespace
 
-int main() {
+int main() try {
 
   // Part I
 
@@ -81,4 +81,8 @@ int main() {
   }
 
   return 0;
+
+} catch (std::exception const &e) {
+  std::println("Error: {}", e.what());
+  return 1;
 }
