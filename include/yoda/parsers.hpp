@@ -16,15 +16,16 @@
 
 namespace yoda {
 
-namespace detail {
+/**
+ * @brief The noop parser, consumes nothing.
+ */
+constexpr auto noop = [](std::string_view sv) -> result<std::monostate> {
+  return {{}, sv};
+};
 
-template <class... Args, class R = std::unexpected<std::string>>
-constexpr auto err(std::format_string<Args...> fmt, Args &&...args) -> R {
-  return std::unexpected(std::format(fmt, std::forward<Args>(args)...));
-}
-
-} // namespace detail
-
+/**
+ * @brief The any parser, consumes any character.
+ */
 constexpr auto any = [](std::string_view sv) -> result<char> {
   if (sv.empty()) {
     return {detail::err("Expected any character but got EoF"), {}};
@@ -32,13 +33,9 @@ constexpr auto any = [](std::string_view sv) -> result<char> {
   return {sv[0], sv.substr(1)};
 };
 
-constexpr auto eof = [](std::string_view sv) -> result<std::monostate> {
-  if (sv.empty()) {
-    return {{}, {}};
-  }
-  return {detail::err("Expected EoF but got '{}'", sv), sv};
-};
-
+/**
+ * @brief The literal parser, consumes a specific character.
+ */
 constexpr auto lit = [](char c) {
   return [c](std::string_view sv) -> result<char> {
     if (sv.empty()) {
@@ -48,6 +45,16 @@ constexpr auto lit = [](char c) {
     }
     return {detail::err("Expected '{}' but got '{}'", c, sv[0]), sv};
   };
+};
+
+/**
+ * @brief The end-of-file parser, consumes only the end of the input.
+ */
+constexpr auto eof = [](std::string_view sv) -> result<std::monostate> {
+  if (sv.empty()) {
+    return {{}, {}};
+  }
+  return {detail::err("Expected EoF but got '{}'", sv), sv};
 };
 
 } // namespace yoda
