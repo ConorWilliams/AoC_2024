@@ -34,7 +34,22 @@ template <typename T> struct parser_impl<result<T>> : std::true_type {
 template <typename P>
 concept is_result = parser_impl<P>::value;
 
+template <typename P>
+concept almost_parser = std::is_trivial_v<P> && std::is_empty_v<P> &&
+                        requires(P parser, std::string_view sv) {
+                          { std::invoke(parser, sv) } -> detail::is_result;
+                          { parser.drop() }
+                        };
+
+template <typename P> struct parser_impl : std::false_type {};
+
+template <typename P> struct parser_impl<P> {};
+
 } // namespace detail
+
+class combinator;
+
+// clang-format off
 
 /**
  * @brief Core concept for a parser.
@@ -42,10 +57,11 @@ concept is_result = parser_impl<P>::value;
  * A parser is expected to be cheaply copyable.
  */
 template <typename P>
-concept parser =
-    std::copy_constructible<P> && requires(P parser, std::string_view sv) {
-      { std::invoke(parser, sv) } -> detail::is_result;
-    };
+concept parser = std::is_trivial_v<P> && 
+                 std::is_empty_v<P> &&
+                 requires(P parser, std::string_view sv) {
+                   { std::invoke(parser, sv) } -> detail::is_result;
+                 } && true;
 
 /**
  * @brief Fetch the result of invoking a parser.
