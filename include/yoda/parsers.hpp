@@ -17,7 +17,15 @@
 
 namespace yoda {
 
-// ====== Atomic ======
+/**
+ * @brief The end-of-file parser, consumes only the end of the input.
+ */
+constexpr auto eof = [](std::string_view sv) -> result<std::monostate> {
+  if (sv.empty()) {
+    return {{}, {}};
+  }
+  return {detail::err("Expected EoF but got '{}'", sv), sv};
+};
 
 /**
  * @brief The noop parser, consumes nothing.
@@ -51,16 +59,14 @@ constexpr auto lit = [](char c) -> parser_of<char> auto {
 };
 
 /**
- * @brief The end-of-file parser, consumes only the end of the input.
+ * @brief Whitespace parser, consumes spaces or tabs.
  */
-constexpr auto eof = [](std::string_view sv) -> result<std::monostate> {
-  if (sv.empty()) {
-    return {{}, {}};
-  }
-  return {detail::err("Expected EoF but got '{}'", sv), sv};
-};
+constexpr parser_of<char> auto ws = alt(lit(' '), lit('\t'));
 
-// ====== Combined ======
+/**
+ * @brief End-of-line parser, consumes a newline character.
+ */
+constexpr parser auto eol = seq(alt(noop, lit('\r')), lit('\n'));
 
 namespace detail {
 
@@ -87,8 +93,11 @@ constexpr auto number_impl(auto extra) -> parser_of<T> auto {
 
 } // namespace detail
 
+/**
+ * @brief Parse an integral number.
+ */
 template <std::integral T, int Base = 10>
-constexpr auto number = detail::number_impl<T>(Base);
+constexpr parser_of<T> auto number = detail::number_impl<T>(Base);
 
 } // namespace yoda
 

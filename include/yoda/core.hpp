@@ -60,6 +60,9 @@ using parser_t =
 template <typename P, typename T>
 concept parser_of = parser<P> && std::same_as<T, parser_t<P>>;
 
+template <typename P, typename Ref>
+concept parser_like = parser<Ref> && parser_of<P, parser_t<Ref>>;
+
 /**
  * @brief Attempt to parse a string with a parser.
  *

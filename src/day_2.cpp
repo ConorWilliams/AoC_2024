@@ -26,9 +26,9 @@ int main() {
 
   // number<int>;
 
-  auto p = seq(star(number<int>), eof);
+  auto p = seq(star(number<int>), star(any), eof);
 
-  auto got = yoda::parse(p, "880 fly");
+  auto got = yoda::parse(p, "880.fly");
 
   // for (auto &&c : got) {
   //   std::println("{}", c);

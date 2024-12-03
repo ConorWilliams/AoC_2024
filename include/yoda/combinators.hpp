@@ -28,7 +28,7 @@ struct map_impl {
         return {std::unexpected(r.error()), sv};
       }
 
-      return {f(std::move(r).value()), r.rest};
+      return {std::invoke(f, std::move(r).value()), r.rest};
     };
   }
 };
@@ -39,6 +39,15 @@ struct map_impl {
  * @brief The map combinator.
  */
 constexpr detail::map_impl map = {};
+
+/**
+ * @brief Drop the result of a parser.
+ *
+ * This maps the result of a parser to `std::monostate`.
+ */
+constexpr auto drop = [](parser auto p) -> parser_of<std::monostate> auto {
+  return map(p, [](auto &&) -> std::monostate { return {}; });
+};
 
 namespace detail {
 
@@ -89,6 +98,16 @@ struct seq_impl {
  * In the case of more than 2 args: `seq(a, b, c) == seq(a, seq(b, c))`
  */
 constexpr detail::seq_impl seq = {};
+
+/**
+ * @brief Sequence left combinator.
+ */
+constexpr auto seq_left = []<parser P, parser Q>(P p,
+                                                 Q q) -> parser_like<P> auto {
+  return map(seq(p, drop(q)), [](auto &&t) {
+    return std::get<0>(std::forward<decltype(t)>(t));
+  });
+};
 
 namespace detail {
 

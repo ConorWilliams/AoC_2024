@@ -7,6 +7,8 @@
 #include <string>
 #include <vector>
 
+#include "yoda.hpp"
+
 namespace {
 
 struct Parsed {
@@ -16,24 +18,23 @@ struct Parsed {
 
 auto parse(std::string const &fname) -> Parsed {
 
-  // Open the file for reading
-  std::ifstream file{fname};
+  using namespace yoda;
 
-  if (!file.is_open()) {
-    throw std::runtime_error("Could not open file");
-  }
+  std::string file = yoda::read(fname);
 
-  Parsed parsed;
+  std::println("{}", file);
 
-  int a = 0;
-  int b = 0;
+  // parser auto line = seq(number<int>, plus(number<int>), );
 
-  while (file >> a >> b) {
-    parsed.lhs.push_back(a);
-    parsed.rhs.push_back(b);
-  }
+  // int a = 0;
+  // int b = 0;
 
-  return parsed;
+  // while (file >> a >> b) {
+  //   parsed.lhs.push_back(a);
+  //   parsed.rhs.push_back(b);
+  // }
+
+  // return parsed;
 }
 
 namespace views = std::ranges::views;
