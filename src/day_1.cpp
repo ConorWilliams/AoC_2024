@@ -24,6 +24,14 @@ auto parse(std::string const &fname) -> Parsed {
 
   std::println("{}", file);
 
+  // clang-format offl
+
+  parser auto p = number<int> //
+                      .seq_left(ws.plus())
+                      .seq(number<int>)
+                      .seq_left(eol)
+                      .star();
+
   // parser auto line = seq(number<int>, plus(number<int>), );
 
   // int a = 0;
