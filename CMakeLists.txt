@@ -8,7 +8,7 @@ project(
 )
 
 # Glob all the source files in the src directory
-file(GLOB SOURCES CONFIGURE_DEPENDS src/day_*.cpp)
+file(GLOB SOURCES CONFIGURE_DEPENDS src/*.cpp)
 
 foreach(SOURCE ${SOURCES})
 
