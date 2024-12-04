@@ -40,17 +40,9 @@ struct bare {
   static auto mute() {}
 };
 
-static_assert(std::same_as<impl::parser::parse_value_t<bare>, void>);
+static_assert(parser<noop<>, std::string_view>);
 
-static_assert(
-    std::same_as<impl::parser::parse_value_t<bare, std::string_view>, unit>);
-
-static_assert(impl::parser::core_parser<bare>);
-
-static_assert(impl::parser::core_parser<bare, std::string_view, unit>);
-
-static_assert(impl::parser::parser<noop<>, std::string_view>);
-// static_assert(std::same_as<parse_error_t<bare>, unit>);
+static_assert(parser<noop<>, void>);
 
 // static_assert(parser_of<bare, unit>);
 

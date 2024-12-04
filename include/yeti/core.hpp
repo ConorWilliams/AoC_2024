@@ -124,31 +124,16 @@ struct result {
   [[no_unique_address]] R rest;                    ///< Unconsumed input.
 };
 
-// TODO: do we need to terminate the recursion?
-
-namespace impl::parser {
-
 /**
- * In prose, a parser:
+ * @brief Implementation of the `parser` concept.
  *
- * 1. Is a function that can be invoked to a parse result<R, T, E>.
- * 2. It must have skip and mute methods.
- * 3. The invocation, skip and mute methods must be valid for all
- *    value categories.
- * 4. The invocations in (3) with the different value categories must
- *    return the same type independent of the value category.
- * 5. Is a move constructible object type.
- *
- * These first constraints are _core_ constraints.
- *
- * --
- *
- * 6. The result of .skip() is a parser -> result<R, unit, E>
- * 7. The result of .mute() is a parser -> result<R, T, unit>
- *
+ * Before reading this code it is recommended to read the
+ * documentation/comment in the `parser` concept which
+ * explains the constraints.
  */
+namespace impl::parser_concept {
 
-// === Consistant invocation === //
+// ===================== Consistant invocation ===================== //
 
 template <typename F, typename G, typename... Args>
 concept similar_invocable = std::invocable<F, Args...>               //
@@ -168,7 +153,6 @@ template <typename R, typename T, typename E>
 struct inspect_impl<R, result<R, T, E>> : std::true_type {
   using value_type = T;
   using error_type = E;
-  using range_type = R;
 };
 
 template <typename P, typename R>
@@ -192,7 +176,7 @@ concept core_parser_invocable = std::invocable<P, R>                    //
                                 && similar_invocable<P, P &&, R>        //
                                 && similar_invocable<P, P const &&, R>; //
 
-// === Consistant skip === //
+// ===================== Consistant skip ===================== //
 
 template <typename P>
 concept skippable = requires (P val) { static_cast<P &&>(val).skip(); };
@@ -218,7 +202,7 @@ concept core_parser_skippable = skippable<P>                         //
                                 && similar_skippable<P, P &&>        //
                                 && similar_skippable<P, P const &&>; //
 
-// === Consistant mute === //
+// ===================== Consistant mute ===================== //
 
 template <typename P>
 concept muteable = requires (P val) { static_cast<P &&>(val).mute(); };
@@ -244,7 +228,7 @@ concept core_parser_muteable = muteable<P>                         //
                                && similar_muteable<P, P &&>        //
                                && similar_muteable<P, P const &&>; //
 
-// === Core parser def === //
+// ===================== Core parser def ===================== //
 
 /**
  * @brief Check 1-5 of the parser concept.
@@ -282,24 +266,40 @@ using parse_error_t = typename parse_result<P, R>::error_type;
  *
  * Specify any of R, T, E as `void` to ignore.
  *
- * This composite concept enforces
+ * This composite concept enforces constraints 1-5
  */
 template <typename P, typename R = void, typename T = void, typename E = void>
-concept core_parser = unconstrained_core_parser<P, R>          //
-                      && either<T, void, parse_value_t<P, R>>  //
-                      && either<E, void, parse_error_t<P, R>>; //
+concept untyped_core_parser = unconstrained_core_parser<P, R>          //
+                              && either<T, void, parse_value_t<P, R>>  //
+                              && either<E, void, parse_error_t<P, R>>; //
 
-// === Extend to recursive ===
+// ===================== Typing ===================== //
+
+template <typename P>
+concept typed = requires { typename P::type; };
+
+template <typename P>
+struct static_type_impl : std::type_identity<void> {};
+
+template <typename P>
+  requires typed<P>
+struct static_type_impl<P> : std::type_identity<typename P::type> {};
+
+template <typename P>
+using static_type_of = static_type_impl<P>::type;
+
+template <typename P, typename R = void>
+concept static_type_matches =
+    !typed<P> || std::same_as<void, R> || std::same_as<R, static_type_of<P>>;
 
 /**
- * @brief The full canonical definition of a parser.
- *
- * This implementation fully subsumes and additional checks in
- * the `parser` concept, they are there to provide better error
- * messages.
+ * @brief Check that `::type` is present and matches.
  */
 template <typename P, typename R = void, typename T = void, typename E = void>
-struct parser_impl : std::false_type {};
+concept core_parser =
+    static_type_matches<P, R> && untyped_core_parser<P, R, T, E>;
+
+// ===================== Extend to recursive ===================== //
 
 template <typename P>
 concept self_skip = std::same_as<P, skip_result_t<P>>;
@@ -307,11 +307,20 @@ concept self_skip = std::same_as<P, skip_result_t<P>>;
 template <typename P>
 concept self_mute = std::same_as<P, mute_result_t<P>>;
 
+/**
+ * @brief Recursive implementation of the parser concept.
+ */
+template <typename P, typename R = void, typename T = void, typename E = void>
+struct parser_impl : std::false_type {};
+
+template <typename R>
+using unit_unless_void = std::conditional_t<std::is_void_v<R>, void, unit>;
+
 template <typename P, typename R, typename T>
-using mute_recur = parser_impl<mute_result_t<P>, R, T, unit>;
+using mute_recur = parser_impl<mute_result_t<P>, R, T, unit_unless_void<R>>;
 
 template <typename P, typename R, typename E>
-using skip_recur = parser_impl<skip_result_t<P>, R, unit, E>;
+using skip_recur = parser_impl<skip_result_t<P>, R, unit_unless_void<R>, E>;
 
 // Terminal case mute and skip OK
 template <typename P, typename R, typename T, typename E>
@@ -334,13 +343,51 @@ template <typename P, typename R, typename T, typename E>
 struct parser_impl<P, R, T, E>
     : std::conjunction<mute_recur<P, R, T>, skip_recur<P, R, E>> {};
 
+/**
+ * @brief The full canonical definition of a parser.
+ *
+ * This implementation fully subsumes and additional checks in
+ * the `parser` concept, they are there to provide better error
+ * messages.
+ */
 template <typename P, typename R = void, typename T = void, typename E = void>
-concept parser = core_parser<P, R, T, E>                      //
-                 && core_parser<skip_result_t<P>, R, unit, E> //
-                 && core_parser<mute_result_t<P>, R, T, unit> //
-                 && parser_impl<P, R, T, E>::value;           //
+concept canonical_parser = parser_impl<P, R, T, E>::value;
 
-} // namespace impl::parser
+/**
+ * @brief Yeti's defining concept, the parser.
+ *
+ * In prose, a parser:
+ *
+ * 1. Can be invoked with an `R` to produce a `result<R, T, E>`.
+ * 2. Has `.skip()` and `.mute()` methods.
+ * 3. Calls in (1) and (2) must be valid for all value categories (VC).
+ * 4. The calls in (3) must return the same type independent of the VC.
+ * 5. Is a move constructible object type.
+ * 6. If `P` defines a `::type` then R matches it.
+ *
+ *
+ * _. The result of `.skip()` is a `parser<R unit, E>`.
+ * _. The result of `.mute()` is a `parser<R, T unit>`.
+ *
+ * Conditions 1-5 are termed _core_ constraints (because they do
+ * not require the recursive checks).
+ *
+ * The template parameters `R`, `T`, `E` can be `void` to ignore.
+ *
+ * @tparam P The parser type.
+ * @tparam R The range type over which the parser operates.
+ * @tparam T The value type which the parser produces.
+ * @tparam E The error type which the parser produces.
+ */
+template <typename P, typename R = void, typename T = void, typename E = void>
+concept parser = core_parser<P, R, T, E>                                     //
+                 && core_parser<skip_result_t<P>, R, unit_unless_void<R>, E> //
+                 && core_parser<mute_result_t<P>, R, T, unit_unless_void<R>> //
+                 && canonical_parser<P, R, T, E>;                            //
+
+} // namespace impl::parser_concept
+
+using impl::parser_concept::parser;
 
 // /**
 //  * @brief Fetch the result of invoking a parser.
