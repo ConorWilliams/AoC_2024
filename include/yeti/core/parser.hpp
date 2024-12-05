@@ -6,10 +6,18 @@
 
 namespace yeti {
 
+namespace impl {
+
+struct mixin_equal {
+  constexpr auto operator==(const mixin_equal &) const -> bool = default;
+};
+
+} // namespace impl
+
 /**
  * @brief In yeti THE unit type is the regular-void for both values and errors.
  */
-struct unit {
+struct unit : impl::mixin_equal {
   static constexpr auto what() noexcept -> std::string_view { return {}; }
 };
 
@@ -104,7 +112,7 @@ concept core_parser_mute_help =
  * @brief Yeti's defining concept, the parser.
  *
  * @tparam P The parser type.
- * @tparam S The range type over which the parser operates.
+ * @tparam S The stream type over which the parser operates.
  * @tparam T The value type which the parser produces.
  * @tparam E The error type which the parser produces.
  */
@@ -118,6 +126,17 @@ concept parser =
 } // namespace impl::parser_concept
 
 using impl::parser_concept::parser;
+
+/**
+ * @brief Test if `P` is a parser over `Q`s stream type and returns the same
+ * value and error types.
+ *
+ * This only requires that `Q` is a parser_fn.
+ */
+template <typename P, typename Q>
+concept parser_like =
+    parser_fn<Q>                                                         //
+    && parser<P, static_type_of<Q>, parse_value_t<Q>, parse_error_t<Q>>; //
 
 } // namespace yeti
 

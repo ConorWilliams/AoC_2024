@@ -7,27 +7,16 @@
 #include <string_view>
 #include <type_traits>
 
+#include "yeti/core/generics.hpp"
+
 namespace yeti {
-
-/**
- * @brief Things in impl are not part of the public API.
- */
-namespace impl {
-
-/**
- * @brief Test if a type is any of the given types.
- */
-template <typename T, typename... Args>
-concept either = (std::same_as<T, Args> || ...);
-
-} // namespace impl
 
 /**
  * @brief A yeti error is produced on-demand via the `what` method.
  */
 template <typename E>
 concept error = std::movable<E> && requires (E e) {
-  { e.what() } -> impl::either<std::string, std::string_view>;
+  { e.what() } -> either<std::string, std::string_view>;
 };
 
 /**
@@ -43,8 +32,8 @@ concept error = std::movable<E> && requires (E e) {
  */
 template <std::movable S, std::movable T, std::movable E>
 struct result {
-  [[no_unique_address]] std::expected<T, E> value; ///< The result of the parse.
   [[no_unique_address]] S rest;                    ///< Unconsumed input.
+  [[no_unique_address]] std::expected<T, E> value; ///< The result of the parse.
 };
 
 // ===  === //
@@ -110,7 +99,7 @@ template <typename, typename>
 struct inspect_impl : std::false_type {};
 
 template <typename S, typename T, typename E>
-struct inspect_impl<S, result<S, T, E>> : std::true_type {
+struct inspect_impl<S, result<std::decay_t<S>, T, E>> : std::true_type {
   using value_type = T;
   using error_type = E;
 };
@@ -212,6 +201,24 @@ concept parser_fn = std::move_constructible<P>                        //
 } // namespace impl::parser_fn_concept
 
 using impl::parser_fn_concept::parser_fn;
+
+/**
+ * @brief Fetch the value type of a parser.
+ *
+ * This returns `void` if `S` is `void` and the parser is untyped.
+ */
+template <typename P, typename S = void>
+  requires parser_fn<P, S>
+using parse_value_t = impl::parser_fn_concept::parse_value_t<P, S>;
+
+/**
+ * @brief Fetch the error type of a parser.
+ *
+ * This returns `void` if `S` is `void` and the parser is untyped.
+ */
+template <typename P, typename S = void>
+  requires parser_fn<P, S>
+using parse_error_t = impl::parser_fn_concept::parse_error_t<P, S>;
 
 } // namespace yeti
 

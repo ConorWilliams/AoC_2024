@@ -6,7 +6,7 @@ __Parser function__: `parser_fn: P -> S -> T -> E -> bool`
 
 1. Is a move constructible type.
 2. If `P` defines a `::type` then S matches it.
-3. Can be invoked with an `S` to produce a `result<S, T, E>`.
+3. Can be invoked with an `S` to produce a `result<std::decay_t<S>, T, E>`.
 4. Invocation must be valid for all value categories (VC).
 5. Invocations in (3) must return the same type independent of the VC.
 

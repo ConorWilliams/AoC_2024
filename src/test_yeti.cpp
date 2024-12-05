@@ -1,14 +1,55 @@
 
 
+#include <concepts>
+#include <expected>
 #include <string_view>
 #include <utility>
 
+#include "yeti/core/generics.hpp"
 #include "yeti/core/parser.hpp"
 #include "yeti/core/parser_fn.hpp"
+
+#include "yeti/core/parser_lift.hpp"
 
 namespace {
 
 using namespace yeti;
+
+inline constexpr auto x =
+    [](std::string_view sv) -> result<std::string_view, char, int> {
+  if (sv.starts_with("h")) {
+    return {sv.substr(1), 'h'};
+  }
+
+  return {sv, std::unexpected(1)};
+};
+
+static_assert(parser_fn<decltype(x)>);
+
+constexpr auto p = lift(x).skip();
+
+constexpr std::string_view sv{"hello"};
+
+static_assert(parser_fn<decltype(p), std::string_view const &>);
+
+// static_assert(
+//     std::same_as<int, parse_error_t<decltype(p), std::string_view const &>>);
+
+constexpr auto y = p(sv);
+
+static_assert(y.value.value() == unit{});
+
+// // template <typename T = std::string>
+// // constexpr auto test(T &&) -> int {
+
+// //   static_assert(std::same_as<T, void>);
+
+// //   return 0;
+// // }
+
+// constexpr auto x = test({});
+
+// ================================================================ //
 
 // 1. Is a move constructible type.
 

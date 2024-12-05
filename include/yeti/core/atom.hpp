@@ -4,6 +4,8 @@
 #include <string_view>
 #include <utility>
 
+#include "yeti/core/parser.hpp"
+
 /**
  * @brief Some of the most fundamental parsers.
  */
@@ -13,7 +15,7 @@ namespace yeti {
 /**
  * @brief A unit type that signals a value/error that cannot be produced.
  */
-struct never {
+struct never : impl::mixin_equal {
 
   never() = delete;
 
