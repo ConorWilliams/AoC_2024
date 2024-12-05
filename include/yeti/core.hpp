@@ -41,6 +41,8 @@
  *
  * TODO: just, desc
  *
+ * TODO: move the range::range constraint to something weaker.
+ *
  *
  */
 
@@ -77,12 +79,6 @@ concept either = (std::same_as<T, Args> || ...);
 template <typename T>
 concept move_cons_object = std::is_object_v<T> && std::move_constructible<T>;
 
-// /**
-//  * @brief Test if a type can be derived from.
-//  */
-// template <typename T>
-// concept derivable = std::is_class_v<T> && !std::is_final_v<T>;
-
 /**
  * @brief A yeti error is produced on-demand via the `what` method.
  */
@@ -102,7 +98,7 @@ struct unit {
  * @brief A unit type that signals a value that cannot be produced.
  */
 struct never {
-  [[noreturn]] static constexpr auto what() -> std::string_view {
+  [[noreturn]] static constexpr auto what() noexcept -> std::string_view {
     std::unreachable();
   }
 };
@@ -231,15 +227,14 @@ concept core_parser_muteable = muteable<P>                         //
 // ===================== Core parser def ===================== //
 
 /**
- * @brief Check 1-5 of the parser concept.
+ * @brief Check 1-4 of the parser concept.
  *
  * When R is void then the check is for a generic
  * parser, i.e. the range type is not known yet.
  */
 template <typename P, typename R = void>
 concept unconstrained_core_parser =
-    move_cons_object<P>                                        //
-    && core_parser_skippable<P>                                //
+    core_parser_skippable<P>                                   //
     && core_parser_muteable<P>                                 //
     && (std::same_as<R, void> || core_parser_invocable<P, R>); //
 
@@ -261,17 +256,24 @@ template <typename P, typename R = void>
   requires unconstrained_core_parser<P, R>
 using parse_error_t = typename parse_result<P, R>::error_type;
 
+// For better error messages
+template <typename P, typename R = void, typename T = void>
+concept value_matches_request = either<T, void, parse_value_t<P, R>>;
+
+template <typename P, typename R = void, typename E = void>
+concept error_matches_request = either<E, void, parse_error_t<P, R>>;
+
 /**
  * @brief Check that `P(R) -> result<R, T, E>
  *
  * Specify any of R, T, E as `void` to ignore.
  *
- * This composite concept enforces constraints 1-5
+ * This composite concept enforces constraints 1-4
  */
 template <typename P, typename R = void, typename T = void, typename E = void>
-concept untyped_core_parser = unconstrained_core_parser<P, R>          //
-                              && either<T, void, parse_value_t<P, R>>  //
-                              && either<E, void, parse_error_t<P, R>>; //
+concept untyped_core_parser = unconstrained_core_parser<P, R>    //
+                              && value_matches_request<P, R, T>  //
+                              && error_matches_request<P, R, E>; //
 
 // ===================== Typing ===================== //
 
@@ -290,16 +292,34 @@ using static_type_of = static_type_impl<P>::type;
 
 template <typename P, typename R = void>
 concept static_type_matches =
-    !typed<P> || std::same_as<void, R> || std::same_as<R, static_type_of<P>>;
+    either<void, R, static_type_of<P>> || std::same_as<R, static_type_of<P>>;
+
+template <typename R, typename P>
+using else_static = std::conditional_t<std::is_void_v<R>, static_type_of<P>, R>;
 
 /**
  * @brief Check that `::type` is present and matches.
+ *
+ * Additionally checks conditions 5-6 of the parser concept.
+ *
+ * Possibilities (static, R):
+ * - void, void -> untyped_core_parser<R, ...>
+ * - void, R    -> untyped_core_parser<R, ...>
+ * - T,    void -> untyped_core_parser<T, ...>
+ * - T,    R    -> same<T, R> && untyped_core_parser<T, ...>
  */
 template <typename P, typename R = void, typename T = void, typename E = void>
-concept core_parser =
-    static_type_matches<P, R> && untyped_core_parser<P, R, T, E>;
+concept core_parser = move_cons_object<P>                                 //
+                      && static_type_matches<P, R>                        //
+                      && untyped_core_parser<P, else_static<R, P>, T, E>; //
 
 // ===================== Extend to recursive ===================== //
+
+/**
+ * Concepts cannot be recursive, so this must be specified the old
+ * fashioned way. This is then partially duplicated in concept-land
+ * for be better error messages.
+ */
 
 template <typename P>
 concept self_skip = std::same_as<P, skip_result_t<P>>;
@@ -307,20 +327,33 @@ concept self_skip = std::same_as<P, skip_result_t<P>>;
 template <typename P>
 concept self_mute = std::same_as<P, mute_result_t<P>>;
 
+template <typename... R>
+using unit_unless_void =
+    std::conditional_t<(std::is_void_v<R> && ...), void, unit>;
+
 /**
  * @brief Recursive implementation of the parser concept.
  */
 template <typename P, typename R = void, typename T = void, typename E = void>
 struct parser_impl : std::false_type {};
 
-template <typename R>
-using unit_unless_void = std::conditional_t<std::is_void_v<R>, void, unit>;
-
+// If neither P or R know the stream type then don't check for unit.
 template <typename P, typename R, typename T>
-using mute_recur = parser_impl<mute_result_t<P>, R, T, unit_unless_void<R>>;
+using mute_recur_help =
+    parser_impl<P, R, T, unit_unless_void<R, static_type_of<P>>>;
 
+// Propagate static type into recursive call
+template <typename P, typename R, typename T>
+using mute_recur = mute_recur_help<mute_result_t<P>, else_static<R, P>, T>;
+
+// If neither P or R know the stream type then don't check for unit.
 template <typename P, typename R, typename E>
-using skip_recur = parser_impl<skip_result_t<P>, R, unit_unless_void<R>, E>;
+using skip_recur_help =
+    parser_impl<P, R, unit_unless_void<R, static_type_of<P>>, E>;
+
+// Propagate static type into recursive call
+template <typename P, typename R, typename E>
+using skip_recur = skip_recur_help<skip_result_t<P>, else_static<R, P>, E>;
 
 // Terminal case mute and skip OK
 template <typename P, typename R, typename T, typename E>
@@ -353,6 +386,16 @@ struct parser_impl<P, R, T, E>
 template <typename P, typename R = void, typename T = void, typename E = void>
 concept canonical_parser = parser_impl<P, R, T, E>::value;
 
+// === Small helpers === //
+
+template <typename P, typename R = void, typename E = void>
+concept core_parser_skip_help =
+    core_parser<P, R, unit_unless_void<R, static_type_of<P>>, E>;
+
+template <typename P, typename R = void, typename T = void>
+concept core_parser_mute_help =
+    core_parser<P, R, T, unit_unless_void<R, static_type_of<P>>>;
+
 /**
  * @brief Yeti's defining concept, the parser.
  *
@@ -380,10 +423,11 @@ concept canonical_parser = parser_impl<P, R, T, E>::value;
  * @tparam E The error type which the parser produces.
  */
 template <typename P, typename R = void, typename T = void, typename E = void>
-concept parser = core_parser<P, R, T, E>                                     //
-                 && core_parser<skip_result_t<P>, R, unit_unless_void<R>, E> //
-                 && core_parser<mute_result_t<P>, R, T, unit_unless_void<R>> //
-                 && canonical_parser<P, R, T, E>;                            //
+concept parser =
+    core_parser<P, R, T, E>                                          //
+    && core_parser_skip_help<skip_result_t<P>, else_static<R, P>, E> //
+    && core_parser_mute_help<mute_result_t<P>, else_static<R, P>, T> //
+    && canonical_parser<P, R, T, E>;                                 //
 
 } // namespace impl::parser_concept
 
