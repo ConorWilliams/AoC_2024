@@ -6,9 +6,13 @@
 #include <string>
 #include <string_view>
 #include <type_traits>
-#include <utility>
 
 namespace yeti {
+
+/**
+ * @brief Things in impl are not part of the public API.
+ */
+namespace impl {
 
 /**
  * @brief Test if a type is any of the given types.
@@ -16,12 +20,14 @@ namespace yeti {
 template <typename T, typename... Args>
 concept either = (std::same_as<T, Args> || ...);
 
+} // namespace impl
+
 /**
  * @brief A yeti error is produced on-demand via the `what` method.
  */
 template <typename E>
 concept error = std::movable<E> && requires (E e) {
-  { e.what() } -> either<std::string, std::string_view>;
+  { e.what() } -> impl::either<std::string, std::string_view>;
 };
 
 /**
@@ -29,7 +35,7 @@ concept error = std::movable<E> && requires (E e) {
  *
  * A parser can succeed or fail, regardless it returns the unconsumed input.
  *
- * TIP: try destructuring the result type to get the value and the rest.
+ * TIP: Try destructuring the result type to get the value and the rest.
  *
  * @tparam T The type of the result of the parse.
  * @tparam E The type of the error of the parse.
@@ -40,6 +46,10 @@ struct result {
   [[no_unique_address]] std::expected<T, E> value; ///< The result of the parse.
   [[no_unique_address]] R rest;                    ///< Unconsumed input.
 };
+
+// ===  === //
+// ===  === //
+// ===  === //
 
 namespace impl {
 
@@ -64,6 +74,23 @@ using static_type_of = impl::static_type_impl<std::remove_cvref_t<T>>::type;
 template <typename T>
 concept typed = !std::same_as<static_type_of<T>, void>;
 
+namespace impl {
+
+/**
+ * @brief If `R` is void then use the static type of `P`.
+ */
+template <typename R, typename P>
+using else_static = std::conditional_t<std::is_void_v<R>, static_type_of<P>, R>;
+
+} // namespace impl
+
+// ===  === //
+// ===  === //
+// ===  === //
+
+/**
+ * @brief Implementation of the parser_fn concept.
+ */
 namespace impl::parser_fn_concept {
 
 /**
@@ -122,6 +149,10 @@ concept unconstrained_parser_fn =
     std::move_constructible<P>                                  //
     && unconstrained_parser_fn_help<std::remove_cvref_t<P>, R>; //
 
+// ===  === //
+// ===  === //
+// ===  === //
+
 /**
  * This is needed because inspect_result does not
  * short-circuiting when R is void.
@@ -162,13 +193,9 @@ concept untyped_parser_fn = unconstrained_parser_fn<P, R>      //
                             && value_matches_request<P, R, T>  //
                             && error_matches_request<P, R, E>; //
 
-// ===================== Typing ===================== //
-
-/**
- * @brief If `R` is void then use the static type of `P`.
- */
-template <typename R, typename P>
-using else_static = std::conditional_t<std::is_void_v<R>, static_type_of<P>, R>;
+// ===  === //
+// ===  === //
+// ===  === //
 
 template <typename P, typename R = void>
 concept static_type_matches =

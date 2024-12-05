@@ -13,18 +13,19 @@ __Parser function__: `parser_fn: P -> R -> T -> E -> bool`
 If `R` is `void` then No. 2-5 are not required. If `T`/`E` is `void` then
 the `T`/`E` of the `result` in No. 3 is not required to match `void`.
 
-The purpose of 4 and 5 is to make static type checking possible for typed
+The purpose of No. 4-5 is to make static type checking possible for typed
 parsers before they are invoked.
 
-- parser_typed_fn: P -> R -> T -> E -> bool
+__Parser__: `parser: P -> R -> T -> E -> bool`
 
-- parser_object: P -> R -> T -> E -> bool
+1. Is a `parser_fn<P, R, T, E>`
+2. Has `.skip()` and `.mute()` methods.
+3. The methods in (2) must be valid for all VC.
+4. The methods in (3) must return the same type independent of the VC.
+5. The result of `.skip()` is a `parser<'R unit, E>`.
+6. The result of `.mute()` is a `parser<'R, T unit>`.
 
-- 5. Has `.skip()` and `.mute()` methods.
-- 6. The methods in (5) must be valid for all VC.
-- 7. The methods in (5) must return the same type independent of the VC.
+In No 5-6, if `'R` is the static type of P if it is not `void` otherwise `R`.
 
-- parser: P -> R -> T -> E -> bool
-
-- 8. The result of `.skip()` is a `parser<R unit, E>`.
-- 9. The result of `.mute()` is a `parser<R, T unit>`.
+Similar to `parser_fn`, the purpose of No 3-4 is to make static type checking
+possible for typed parsers before they are invoked.

@@ -1,8 +1,10 @@
 
 
-#include "yeti/core/parser_fn.hpp"
 #include <string_view>
 #include <utility>
+
+#include "yeti/core/parser.hpp"
+#include "yeti/core/parser_fn.hpp"
 
 namespace {
 
@@ -89,6 +91,21 @@ struct overloaded_bad {
 };
 
 static_assert(!parser_fn<overloaded_bad, int>);
+
+// ================================================================ //
+
+struct H {
+
+  using type = int;
+
+  static auto operator()(int) -> result<int, unit, unit>;
+  static auto skip() -> H;
+  static auto mute() -> H;
+};
+
+static_assert(parser<H>);
+
+static_assert(parser<H, int>);
 
 } // namespace
 
