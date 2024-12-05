@@ -18,9 +18,9 @@ struct map_impl {
   constexpr auto
   operator()(P p, F f) -> parser_of<std::invoke_result_t<F, parser_t<P>>> auto {
     //
-    using R = result<std::invoke_result_t<F, parser_t<P>>>;
+    using S = result<std::invoke_result_t<F, parser_t<P>>>;
 
-    return [p = std::move(p), f = std::move(f)](std::string_view sv) -> R {
+    return [p = std::move(p), f = std::move(f)](std::string_view sv) -> S {
       //
       auto r = p(sv);
 
@@ -46,7 +46,9 @@ constexpr detail::map_impl map = {};
  * This maps the result of a parser to `std::monostate`.
  */
 constexpr auto drop = [](parser auto p) -> parser_of<std::monostate> auto {
-  return map(p, [](auto &&) -> std::monostate { return {}; });
+  return map(p, [](auto &&) -> std::monostate {
+    return {};
+  });
 };
 
 namespace detail {
@@ -61,9 +63,9 @@ struct seq_impl {
     //
     using Tup = std::tuple<parser_t<P>, parser_t<Q>>;
 
-    using R = result<Tup>;
+    using S = result<Tup>;
 
-    return [p = std::move(p), q = std::move(q)](std::string_view sv) -> R {
+    return [p = std::move(p), q = std::move(q)](std::string_view sv) -> S {
       //
       auto lhs = p(sv);
 
@@ -111,16 +113,18 @@ constexpr auto seq_left = []<parser P, parser Q>(P p,
 
 namespace detail {
 
-template <class... Args, class R = std::unexpected<std::string>>
-constexpr auto err(std::format_string<Args...> fmt, Args &&...args) -> R {
+template <class... Args, class S = std::unexpected<std::string>>
+constexpr auto err(std::format_string<Args...> fmt, Args &&...args) -> S {
   return std::unexpected(std::format(fmt, std::forward<Args>(args)...));
 }
 
-template <typename L, typename R> struct alt_result {
-  using type = std::variant<L, R>;
+template <typename L, typename S>
+struct alt_result {
+  using type = std::variant<L, S>;
 };
 
-template <typename T> struct alt_result<T, T> {
+template <typename T>
+struct alt_result<T, T> {
   using type = T;
 };
 
@@ -132,9 +136,9 @@ struct alt_impl {
   static constexpr auto
   operator()(P p, Q q) -> parser_of<alt_variant_type<P, Q>> auto {
     //
-    using R = result<alt_variant_type<P, Q>>;
+    using S = result<alt_variant_type<P, Q>>;
 
-    return [p = std::move(p), q = std::move(q)](std::string_view sv) -> R {
+    return [p = std::move(p), q = std::move(q)](std::string_view sv) -> S {
       //
       auto lhs = p(sv);
 
@@ -171,7 +175,8 @@ constexpr detail::alt_impl alt = {};
 
 namespace detail {
 
-template <parser P> using rep_vector_t = std::vector<parser_t<P>>;
+template <parser P>
+using rep_vector_t = std::vector<parser_t<P>>;
 
 struct rep_impl {
 
@@ -183,11 +188,11 @@ struct rep_impl {
 
     // clang-format on
 
-    using R = result<std::vector<parser_t<P>>>;
+    using S = result<std::vector<parser_t<P>>>;
 
     constexpr std::string_view fmt = "Expected at least {} repetitions, got {}";
 
-    return [=, p = std::move(p)](std::string_view sv) -> R {
+    return [=, p = std::move(p)](std::string_view sv) -> S {
       //
       std::vector<parser_t<P>> acc;
 

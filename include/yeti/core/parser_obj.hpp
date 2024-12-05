@@ -70,8 +70,8 @@ concept parser_obj_muteable = muteable<P>                         //
 // ===  === //
 // ===  === //
 
-template <typename P, typename R, typename T, typename E>
-concept parser_obj = parser_fn<P, R, T, E>      //
+template <typename P, typename S, typename T, typename E>
+concept parser_obj = parser_fn<P, S, T, E>      //
                      && parser_obj_skippable<P> //
                      && parser_obj_muteable<P>; //
 

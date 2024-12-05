@@ -39,12 +39,12 @@ concept error = std::movable<E> && requires (E e) {
  *
  * @tparam T The type of the result of the parse.
  * @tparam E The type of the error of the parse.
- * @tparam R The type of the range that the parser consumes.
+ * @tparam S The type of stream that the parser consumes.
  */
-template <std::movable R, std::movable T, std::movable E>
+template <std::movable S, std::movable T, std::movable E>
 struct result {
   [[no_unique_address]] std::expected<T, E> value; ///< The result of the parse.
-  [[no_unique_address]] R rest;                    ///< Unconsumed input.
+  [[no_unique_address]] S rest;                    ///< Unconsumed input.
 };
 
 // ===  === //
@@ -77,10 +77,10 @@ concept typed = !std::same_as<static_type_of<T>, void>;
 namespace impl {
 
 /**
- * @brief If `R` is void then use the static type of `P`.
+ * @brief If `S` is void then use the static type of `P`.
  */
-template <typename R, typename P>
-using else_static = std::conditional_t<std::is_void_v<R>, static_type_of<P>, R>;
+template <typename S, typename P>
+using else_static = std::conditional_t<std::is_void_v<S>, static_type_of<P>, S>;
 
 } // namespace impl
 
@@ -109,45 +109,45 @@ namespace detail {
 template <typename, typename>
 struct inspect_impl : std::false_type {};
 
-template <typename R, typename T, typename E>
-struct inspect_impl<R, result<R, T, E>> : std::true_type {
+template <typename S, typename T, typename E>
+struct inspect_impl<S, result<S, T, E>> : std::true_type {
   using value_type = T;
   using error_type = E;
 };
 
 } // namespace detail
 
-template <typename P, typename R>
-  requires std::invocable<P, R>
-using inspect_result = detail::inspect_impl<R, std::invoke_result_t<P, R>>;
+template <typename P, typename S>
+  requires std::invocable<P, S>
+using inspect_result = detail::inspect_impl<S, std::invoke_result_t<P, S>>;
 
-template <typename P, typename R>
+template <typename P, typename S>
 concept invoke_returns_result =
-    std::invocable<P, R> && inspect_result<P, R>::value;
+    std::invocable<P, S> && inspect_result<P, S>::value;
 
 /**
- * @brief Check that `P(R) -> result<R, _, _>` for all invocations.
+ * @brief Check that `P(S) -> result<S, _, _>` for all invocations.
  *
  * All invocations must return the same result type.
  *
- * This concept is not tolerant of `R = void` and P should be unqualified.
+ * This concept is not tolerant of `S = void` and P should be unqualified.
  */
-template <typename P, typename R>
+template <typename P, typename S>
 concept unconstrained_parser_fn_impl =
-    invoke_returns_result<P, R>             //
-    && similar_invocable<P, P &, R>         //
-    && similar_invocable<P, P const &, R>   //
-    && similar_invocable<P, P &&, R>        //
-    && similar_invocable<P, P const &&, R>; //
+    invoke_returns_result<P, S>             //
+    && similar_invocable<P, P &, S>         //
+    && similar_invocable<P, P const &, S>   //
+    && similar_invocable<P, P &&, S>        //
+    && similar_invocable<P, P const &&, S>; //
 
-template <typename P, typename R = void>
+template <typename P, typename S = void>
 concept unconstrained_parser_fn_help =
-    std::same_as<R, void> || unconstrained_parser_fn_impl<P, R>;
+    std::same_as<S, void> || unconstrained_parser_fn_impl<P, S>;
 
-template <typename P, typename R = void>
+template <typename P, typename S = void>
 concept unconstrained_parser_fn =
     std::move_constructible<P>                                  //
-    && unconstrained_parser_fn_help<std::remove_cvref_t<P>, R>; //
+    && unconstrained_parser_fn_help<std::remove_cvref_t<P>, S>; //
 
 // ===  === //
 // ===  === //
@@ -155,12 +155,12 @@ concept unconstrained_parser_fn =
 
 /**
  * This is needed because inspect_result does not
- * short-circuiting when R is void.
+ * short-circuiting when S is void.
  */
 namespace detail {
 
-template <typename P, typename R = void>
-struct parse_result : inspect_result<P, R> {};
+template <typename P, typename S = void>
+struct parse_result : inspect_result<P, S> {};
 
 template <typename P>
 struct parse_result<P, void> {
@@ -170,44 +170,44 @@ struct parse_result<P, void> {
 
 } // namespace detail
 
-template <typename P, typename R = void>
-using parse_value_t = detail::parse_result<P, R>::value_type;
+template <typename P, typename S = void>
+using parse_value_t = detail::parse_result<P, S>::value_type;
 
-template <typename P, typename R = void>
-using parse_error_t = detail::parse_result<P, R>::error_type;
+template <typename P, typename S = void>
+using parse_error_t = detail::parse_result<P, S>::error_type;
 
 // For better error messages
-template <typename P, typename R = void, typename T = void>
-concept value_matches_request = either<T, void, parse_value_t<P, R>>;
+template <typename P, typename S = void, typename T = void>
+concept value_matches_request = either<T, void, parse_value_t<P, S>>;
 
-template <typename P, typename R = void, typename E = void>
-concept error_matches_request = either<E, void, parse_error_t<P, R>>;
+template <typename P, typename S = void, typename E = void>
+concept error_matches_request = either<E, void, parse_error_t<P, S>>;
 
 /**
- * @brief Check that `P(R) -> result<R, T, E>
+ * @brief Check that `P(S) -> result<S, T, E>
  *
- * Specify any of R, T, E as `void` to ignore.
+ * Specify any of S, T, E as `void` to ignore.
  */
-template <typename P, typename R = void, typename T = void, typename E = void>
-concept untyped_parser_fn = unconstrained_parser_fn<P, R>      //
-                            && value_matches_request<P, R, T>  //
-                            && error_matches_request<P, R, E>; //
+template <typename P, typename S = void, typename T = void, typename E = void>
+concept untyped_parser_fn = unconstrained_parser_fn<P, S>      //
+                            && value_matches_request<P, S, T>  //
+                            && error_matches_request<P, S, E>; //
 
 // ===  === //
 // ===  === //
 // ===  === //
 
-template <typename P, typename R = void>
+template <typename P, typename S = void>
 concept static_type_matches =
-    either<void, R, static_type_of<P>> || std::same_as<R, static_type_of<P>>;
+    either<void, S, static_type_of<P>> || std::same_as<S, static_type_of<P>>;
 
 /**
  * @brief The lowest level of the parser concept.
  */
-template <typename P, typename R = void, typename T = void, typename E = void>
+template <typename P, typename S = void, typename T = void, typename E = void>
 concept parser_fn = std::move_constructible<P>                        //
-                    && static_type_matches<P, R>                      //
-                    && untyped_parser_fn<P, else_static<R, P>, T, E>; //
+                    && static_type_matches<P, S>                      //
+                    && untyped_parser_fn<P, else_static<S, P>, T, E>; //
 
 } // namespace impl::parser_fn_concept
 
