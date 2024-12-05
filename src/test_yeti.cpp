@@ -107,6 +107,22 @@ static_assert(parser<H>);
 
 static_assert(parser<H, int>);
 
+struct never {};
+
+template <typename E>
+struct noop {
+
+  using type = int;
+
+  static auto operator()(int) -> result<int, unit, E>;
+
+  static auto skip() -> noop;
+
+  static auto mute() -> noop<unit>;
+};
+
+static_assert(parser<noop<never>>);
+
 } // namespace
 
 int main() { return 0; }
