@@ -30,6 +30,9 @@ constexpr auto p = lift(x).skip();
 
 constexpr std::string_view sv{"hello"};
 
+static_assert(
+    specialization_of<rebind<decltype(x), std::string_view, unit>, result>);
+
 static_assert(parser_fn<decltype(p), std::string_view const &>);
 
 // static_assert(

@@ -28,6 +28,11 @@ namespace yeti {
 // clang-format on
 
 /**
+ * @brief Love to hate it, hate to love it, love to have it.
+ */
+#define YETI_FWD(...) std::forward<decltype(__VA_ARGS__)>(__VA_ARGS__)
+
+/**
  * @brief Test if a type is any of the given types.
  */
 template <typename T, typename... Args>
