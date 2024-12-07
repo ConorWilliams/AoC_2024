@@ -230,7 +230,7 @@ struct rebind<result<S, T, E>, void, void> {
  * `P(S) -> result<`S, 'T if is_void<T> else T, 'E if is_void<E> else E>`.
  */
 template <typename P, typename S = void, typename T = void, typename E = void>
-  requires parser_fn<P, S> && (typed<P> || !std::same_as<S, void>)
+  requires parser_fn<P, S> && (typed<P> || different_from<S, void>)
 using rebind = impl::rebind<std::invoke_result_t<P, S>, T, E>::type;
 
 } // namespace yeti
