@@ -1,6 +1,7 @@
 #ifndef B87A46A7_5DC3_479A_823A_01D3F94B70B4
 #define B87A46A7_5DC3_479A_823A_01D3F94B70B4
 
+#include "yeti/core/generics.hpp"
 #include "yeti/core/parser_fn.hpp"
 #include "yeti/core/parser_obj.hpp"
 
@@ -58,16 +59,22 @@ template <typename P, typename S, typename T>
 using mute_recur_help = parser_impl<P, S, T, unit_unless_void<S, type_of<P>>>;
 
 // Propagate static type into recursive call
+// We remove the && to prevent `std::copy_constructible` causing the
+// `parser_fn` concept to trigger.
 template <typename P, typename S, typename T>
-using mute_recur = mute_recur_help<mute_result_t<P>, else_static<S, P>, T>;
+using mute_recur =
+    mute_recur_help<remove_rvalue_t<mute_result_t<P>>, else_static<S, P>, T>;
 
 // If neither P or S know the stream type then don't check for unit.
 template <typename P, typename S, typename E>
 using skip_recur_help = parser_impl<P, S, unit_unless_void<S, type_of<P>>, E>;
 
 // Propagate static type into recursive call
+// We remove the && to prevent `std::copy_constructible` causing the
+// `parser_fn` concept to trigger.
 template <typename P, typename S, typename E>
-using skip_recur = skip_recur_help<skip_result_t<P>, else_static<S, P>, E>;
+using skip_recur =
+    skip_recur_help<remove_rvalue_t<skip_result_t<P>>, else_static<S, P>, E>;
 
 // Terminal case mute and skip OK
 template <typename P, typename S, typename T, typename E>
@@ -106,11 +113,11 @@ concept canonical_parser = parser_impl<P, S, T, E>::value;
 
 template <typename P, typename S = void, typename E = void>
 concept core_parser_skip_help =
-    parser_obj<P, S, unit_unless_void<S, type_of<P>>, E>;
+    parser_obj<remove_rvalue_t<P>, S, unit_unless_void<S, type_of<P>>, E>;
 
 template <typename P, typename S = void, typename T = void>
 concept core_parser_mute_help =
-    parser_obj<P, S, T, unit_unless_void<S, type_of<P>>>;
+    parser_obj<remove_rvalue_t<P>, S, T, unit_unless_void<S, type_of<P>>>;
 
 /**
  * @brief Yeti's defining concept, the parser.

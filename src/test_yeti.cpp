@@ -14,6 +14,13 @@ struct empty {};
 
 using namespace yeti;
 
+using XXX = yeti::impl::parser_lift::skip_parser<
+    yeti::impl::parser_lift::lifted<yeti::impl::fail_impl::fail>>;
+
+static_assert(parser<XXX>);
+
+static_assert(std::copy_constructible<int const>);
+
 constexpr auto k = pure.skip();
 
 struct empty_empty {

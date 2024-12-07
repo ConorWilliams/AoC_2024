@@ -77,6 +77,22 @@ struct specialization_of_concept<U<Ts...>, U> : std::true_type {};
 template <typename T, template <typename...> typename U>
 concept specialization_of = impl::specialization_of_concept<T, U>::value;
 
+namespace impl {
+
+template <typename T>
+struct remove_rvalue : std::type_identity<T> {};
+
+template <typename T>
+struct remove_rvalue<T &&> : std::type_identity<T> {};
+
+} // namespace impl
+
+/**
+ * @brief Remove the rvalue reference from a type.
+ */
+template <typename T>
+using remove_rvalue_t = typename impl::remove_rvalue<T>::type;
+
 } // namespace yeti
 
 #endif /* DC2FEF19_9F77_4C43_B38F_7FF83C9748EA */
