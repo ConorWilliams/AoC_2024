@@ -57,7 +57,6 @@ template <typename P>
 namespace impl::parser_lift {
 
 template <typename F>
-// requires parser_fn<F>
 struct mute_parser;
 
 template <typename F>
@@ -99,7 +98,7 @@ struct lifted final {
   template <typename Self>
     requires missing_mute<F>
   [[nodiscard]] constexpr auto mute(this Self &&self) 
-      YETI_HOF(dummy{})
+      YETI_HOF(mute_parser<lifted>{YETI_FWD(self)})
 
   // Behave like the `parse_fn` itself.
 

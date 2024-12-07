@@ -50,9 +50,9 @@ using mute_result_t = decltype(std::declval<P>().mute());
 
 template <typename P, typename Q>
 concept similar_muteable =
-    muteable<P>                                          //
-    && muteable<Q>                                       //
-    && std::same_as<mute_result_t<P>, mute_result_t<Q>>; //
+    muteable<P>                                              //
+    && muteable<Q>                                           //
+    && same_as_stripped<mute_result_t<P>, mute_result_t<Q>>; //
 
 /**
  * @brief Check that `P.mute() -> _` is valid for all invocations.

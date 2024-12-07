@@ -1,7 +1,7 @@
 #ifndef DFCDA931_4CDB_417B_A9B9_4D990E349614
 #define DFCDA931_4CDB_417B_A9B9_4D990E349614
 
-#include <functional>
+#include <type_traits>
 
 #include "yeti/core/parser_fn.hpp"
 
