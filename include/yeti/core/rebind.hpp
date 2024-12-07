@@ -12,6 +12,20 @@ namespace impl::do_rebind {
 template <typename...>
 struct rebind;
 
+}
+
+/**
+ * @brief Rebind the result of a parser.
+ *
+ * I.e. If `P(S) -> result<'S, 'T, 'E>` then `rebind<P, S, T, E>` is
+ * `P(S) -> result<`S, 'T if is_void<T> else T, 'E if is_void<E> else E>`.
+ */
+template <typename P, typename S = void, typename T = void, typename E = void>
+  requires parser_fn<P, S> && (typed<P> || not_void<S>)
+using rebind = impl::do_rebind::rebind<std::invoke_result_t<P, S>, T, E>::type;
+
+namespace impl::do_rebind {
+
 template <typename S, typename T, typename E, typename t, typename e>
 struct rebind<result<S, T, E>, t, e> {
   using type = result<S, t, e>;
@@ -33,16 +47,6 @@ struct rebind<result<S, T, E>, void, void> {
 };
 
 } // namespace impl::do_rebind
-
-/**
- * @brief Rebind the result of a parser.
- *
- * I.e. If `P(S) -> result<'S, 'T, 'E>` then `rebind<P, S, T, E>` is
- * `P(S) -> result<`S, 'T if is_void<T> else T, 'E if is_void<E> else E>`.
- */
-template <typename P, typename S = void, typename T = void, typename E = void>
-  requires parser_fn<P, S> && (typed<P> || not_void<S>)
-using rebind = impl::do_rebind::rebind<std::invoke_result_t<P, S>, T, E>::type;
 
 } // namespace yeti
 

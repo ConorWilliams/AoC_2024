@@ -7,6 +7,7 @@
 #include <type_traits>
 #include <utility>
 
+#include "yeti/core/atom.hpp"
 #include "yeti/core/generics.hpp"
 #include "yeti/core/lift.hpp"
 #include "yeti/core/parser.hpp"
@@ -70,6 +71,25 @@ static_assert(std::same_as<T, result<std::string_view, unit, int>>);
 static_assert(parser_fn<decltype(p), std::string_view const &>);
 constexpr auto y = p(sv);
 static_assert(y.expected.value() == unit{});
+
+struct half { //
+  static auto
+  operator()(std::string_view sv) -> result<std::string_view, char, int> {
+    if (sv.starts_with("h")) {
+      return {sv.substr(1), 'h'};
+    }
+
+    return {sv, std::unexpected(1)};
+  }
+
+  constexpr auto skip() -> placeholder { return {}; }
+};
+
+static_assert(parser_fn<half, std::string_view>);
+
+constexpr auto _ = half{}.skip();
+
+constexpr auto s = lift(half{}).skip().mute();
 
 // static_assert(
 //     std::same_as<int, parse_error_t<decltype(p), std::string_view const

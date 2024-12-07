@@ -18,6 +18,6 @@ foreach(SOURCE ${SOURCES})
 
   target_include_directories(${exec_name} PRIVATE include)
 
-  target_compile_features(${exec_name} PRIVATE cxx_std_23)
+  target_compile_features(${exec_name} PRIVATE cxx_std_26)
 
 endforeach()

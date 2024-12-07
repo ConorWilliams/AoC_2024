@@ -15,7 +15,7 @@
  * @brief The yeti parser combinator library.
  *
  * The yeti library is a parser combinator library that is designed to be
- * simple, efficient and leverage  C++23 features. With the goal of
+ * simple, efficient and leverage  C++23/26 features. With the goal of
  * simplifying the implementation, yeti makes most of its types aggregates
  * and prefers inheritance over composition (even for standard library
  * types). This exposes some internals but saves a lot of boilerplate code.

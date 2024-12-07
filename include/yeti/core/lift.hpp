@@ -18,13 +18,6 @@
 
 namespace yeti {
 
-struct dummy {
-  template <typename T>
-  static constexpr auto operator()(T) -> result<T, unit, unit>;
-  static constexpr auto skip() -> dummy;
-  static constexpr auto mute() -> dummy;
-};
-
 namespace impl::parser_lift {
 
 template <parser_fn F>
