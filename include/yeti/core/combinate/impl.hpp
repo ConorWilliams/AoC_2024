@@ -28,28 +28,23 @@ struct combinator final {
   [[nodiscard]] constexpr auto operator()(this auto &&self, S &&stream)
       YETI_HOF(std::invoke(YETI_FWD(self).fn, YETI_FWD(stream)))
 
-  template <typename Self>
-    requires ::yeti::combinator<P>
-  [[nodiscard]] constexpr auto skip(this Self &&self)
-      YETI_HOF(YETI_FWD(self).fn.skip())
+  /**
+   * @brief Ignore the result of a parser.
+   *
+   * This generates a new combinator that behaves like the
+   * original but returns `unit` as its value type.
+   */
+  [[nodiscard]] constexpr auto skip(this auto &&self)
+      YETI_HOF(combinate(YETI_FWD(self).fn.skip()))
 
-  using skipper = strip<skip_result_t<P>>;
-
-  // template <typename Self>
-  // [[nodiscard]] constexpr auto skip(this Self &&self) -> combinator<skipper>
-  // {
-  //   return {YETI_FWD(self).fn.skip()};
-  // }
-
-  template <typename Self>
-  [[nodiscard]] constexpr auto skip(this Self &&self) -> auto {
-    return combinate(YETI_FWD(self).fn.skip());
-  }
-
-  //
-
+  /**
+   * @brief Ignore the error of a parser.
+   *
+   * This generates a new combinator that behaves like the
+   * original but returns `unit` as its error type.
+   */
   [[nodiscard]] constexpr auto mute(this auto &&self)
-      YETI_HOF(YETI_FWD(self).fn.mute())
+      YETI_HOF(combinate(YETI_FWD(self).fn.mute()))
 
   // ===  === //
   // ===  === //
