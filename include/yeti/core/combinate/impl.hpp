@@ -2,7 +2,6 @@
 #define CA19C867_8391_4381_AA78_404CA569C1F7
 
 #include "yeti/core/generics.hpp"
-#include "yeti/core/parser_obj.hpp"
 #include "yeti/core/typed.hpp"
 #include <yeti/core/lift.hpp>
 #include <yeti/core/parser.hpp>
@@ -55,8 +54,6 @@ struct combinator final {
   // ===  === //
   // ===  === //
   // ===  === //
-
-  // [[nodi]]
 };
 
 } // namespace impl::parser_combinator

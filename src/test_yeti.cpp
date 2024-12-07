@@ -21,7 +21,7 @@ static_assert(parser<XXX>);
 
 static_assert(std::copy_constructible<int const>);
 
-constexpr auto k = pure.drop();
+constexpr auto k = fail.drop();
 
 static_assert(unit{} == unit{});
 
