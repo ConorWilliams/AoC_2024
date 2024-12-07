@@ -8,10 +8,9 @@
 #include <utility>
 
 #include "yeti/core/generics.hpp"
+#include "yeti/core/lift.hpp"
 #include "yeti/core/parser.hpp"
 #include "yeti/core/parser_fn.hpp"
-
-#include "yeti/core/parser_lift.hpp"
 
 struct empty {};
 
@@ -55,15 +54,24 @@ constexpr auto p = lift(x).skip();
 constexpr std::string_view sv{"hello"};
 static_assert(
     specialization_of<rebind<decltype(x), std::string_view, unit>, result>);
+
+static_assert(parser_fn<decltype(pp), std::string_view>);
+
+// rebind<decltype(pp), std::string_view const &>;
+
+using T = std::invoke_result_t<const yeti::impl::parser_lift::skip_parser<
+                                   yeti::impl::parser_lift::lifted<X>>,
+                               const std::basic_string_view<char> &>;
+
+static_assert(std::same_as<T, result<std::string_view, unit, int>>);
+
 static_assert(parser_fn<decltype(p), std::string_view const &>);
+constexpr auto y = p(sv);
+static_assert(y.value.value() == unit{});
 
 // static_assert(
 //     std::same_as<int, parse_error_t<decltype(p), std::string_view const
 //     &>>);
-
-// constexpr auto y = p(sv);
-
-// static_assert(y.value.value() == unit{});
 
 // // template <typename T = std::string>
 // // constexpr auto test(T &&) -> int {

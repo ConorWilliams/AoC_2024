@@ -3,12 +3,13 @@
 
 #include <expected>
 #include <functional>
+#include <type_traits>
+#include <utility>
 
 #include "yeti/core/generics.hpp"
 #include "yeti/core/parser_fn.hpp"
 #include "yeti/core/parser_obj.hpp"
-#include <type_traits>
-#include <utility>
+#include "yeti/core/rebind.hpp"
 #include <yeti/core/parser.hpp>
 
 /**
@@ -90,7 +91,6 @@ struct lifted final {
   template <typename Self>
     requires missing_skip<F>
   [[nodiscard]] constexpr auto skip(this Self &&self) 
-      // YETI_HOF(dummy{})
       YETI_HOF(skip_parser<lifted>{YETI_FWD(self)})
 
   // ===
@@ -156,8 +156,9 @@ template <typename P>
 struct skip_parser final : skip_mute_base<P> {
 
   template <typename Self, typename S = type_of<P>>
+    requires parser_fn<P, S>
   [[nodiscard]] constexpr auto
-  operator()(this Self &&self, S &&stream) -> skip_result<P, S> {
+  operator()(this Self &&self, S &&stream) -> rebind<P, S, unit, void> {
 
     auto [rest, result] = std::invoke(YETI_FWD(self).fn, YETI_FWD(stream));
 

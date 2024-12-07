@@ -229,46 +229,6 @@ template <typename P, typename S = void>
   requires parser_fn<P, S>
 using parse_error_t = impl::parser_fn_concept::parse_error_t<P, S>;
 
-namespace impl {
-
-template <typename T>
-inline constexpr bool False = false;
-
-template <typename R, typename...>
-struct rebind;
-
-template <typename S, typename T, typename E, typename t, typename e>
-struct rebind<result<S, T, E>, t, e> {
-  using type = result<S, t, e>;
-};
-
-template <typename S, typename T, typename E, typename t>
-struct rebind<result<S, T, E>, t, void> {
-  using type = result<S, t, E>;
-};
-
-template <typename S, typename T, typename E, typename e>
-struct rebind<result<S, T, E>, void, e> {
-  using type = result<S, T, e>;
-};
-
-template <typename S, typename T, typename E>
-struct rebind<result<S, T, E>, void, void> {
-  using type = result<S, T, E>;
-};
-
-} // namespace impl
-
-/**
- * @brief Rebind the result of a parser.
- *
- * I.e. If `P(S) -> result<'S, 'T, 'E>` then `rebind<P, S, T, E>` is
- * `P(S) -> result<`S, 'T if is_void<T> else T, 'E if is_void<E> else E>`.
- */
-template <typename P, typename S = void, typename T = void, typename E = void>
-  requires parser_fn<P, S> && (typed<P> || not_void<S>)
-using rebind = impl::rebind<std::invoke_result_t<P, S>, T, E>::type;
-
 } // namespace yeti
 
 #endif /* CA0BCFB1_B572_4DB2_8DC2_C11079253A5A */
