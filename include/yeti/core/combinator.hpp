@@ -2,7 +2,6 @@
 #define EFAF34CE_6AFE_403C_AA49_FBDC9BC80BB7
 
 #include "yeti/core/generics.hpp"
-#include <yeti/core/lift.hpp>
 #include <yeti/core/parser.hpp>
 
 namespace yeti {
@@ -35,17 +34,18 @@ concept combinator_like =
 // ===  === //
 // ===  === //
 
-template <typename P>
-  requires parser_fn<P>
-[[nodiscard]] constexpr auto
-combinate(P &&p) noexcept(nothrow_storable<P>) -> combinator_like<P> auto {
-  return combinate(lift(YETI_FWD(p)));
-}
+// NOTE: Combinator could include an overload for parser_fn, but it hurts
+// compile times due to the constant need to disambiguate between the
+// `parser`/`parser_fn`/`combinator` which is quite a hard subsumption
+// problem for the compiler to resolve.
 
+/**
+ * @brief ...
+ */
 template <typename P>
   requires parser<P>
 [[nodiscard]] constexpr auto
-combinate(P &&p) noexcept(nothrow_storable<P>) -> combinator_like<P> auto {
+combinate(P &&p) noexcept(nothrow_storable<P>) -> combinator<P> auto {
   return impl::parser_combinator::combinator<strip<P>>{YETI_FWD(p)};
 }
 

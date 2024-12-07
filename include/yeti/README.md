@@ -38,3 +38,27 @@ if `'S` is `void` else its is `unit`.
 
 Similar to `parser_fn`, the purpose of No 3-4 is to make static type checking
 possible for typed parsers before they are invoked.
+
+## COPY
+
+The yeti library is a parser combinator library that is designed to be
+simple, efficient and leverage  C++23/26 features. With the goal of
+simplifying the implementation, yeti makes all of its types aggregates.
+This exposes some internals but saves a lot of boilerplate code.
+
+Yeti is constexpr
+
+Yeti tries to have descriptive error messages.
+
+Yeti has first class support for
+
+- `skip`
+- `ignore`/`mute`/`silence`/`discard`/
+- `drop`
+
+Yeti provides the following parsers:
+
+- `noop` parser that does nothing and always succeeds.
+- `fail` parser that does nothing and always fails.
+- `any` parser that matches any char.
+- `eof` parser that matches the end of the input.

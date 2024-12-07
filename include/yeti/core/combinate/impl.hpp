@@ -27,6 +27,10 @@ struct combinator final {
 
   [[nodiscard]] constexpr auto mute(this auto &&self)
       YETI_HOF(YETI_FWD(self).fn.skip())
+
+  // ===  === //
+  // ===  === //
+  // ===  === //
 };
 
 } // namespace impl::parser_combinator

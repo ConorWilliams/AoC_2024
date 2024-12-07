@@ -54,7 +54,12 @@ template <typename T, typename U>
 concept same_as_stripped = std::same_as<strip<T>, strip<U>>;
 
 template <typename T>
-concept nothrow_storable = std::is_nothrow_constructible_v<strip<T>, T>;
+concept storable =
+    std::movable<strip<T>> && std::is_constructible_v<strip<T>, T>;
+
+template <typename T>
+concept nothrow_storable =
+    storable<T> && std::is_nothrow_constructible_v<strip<T>, T>;
 
 namespace impl {
 

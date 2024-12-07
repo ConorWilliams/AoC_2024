@@ -50,10 +50,10 @@ lift(P &&parser) noexcept(nothrow_storable<P>) -> parser_like<P> auto {
 
 namespace impl::parser_lift {
 
-template <typename F>
+template <typename>
 struct mute_parser;
 
-template <typename F>
+template <typename>
 struct skip_parser;
 
 template <typename P>

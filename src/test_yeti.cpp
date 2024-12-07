@@ -7,11 +7,8 @@
 #include <type_traits>
 #include <utility>
 
-#include "yeti/core/atom.hpp"
-#include "yeti/core/generics.hpp"
-#include "yeti/core/lift.hpp"
-#include "yeti/core/parser.hpp"
-#include "yeti/core/parser_fn.hpp"
+#include "yeti/core.hpp"
+#include "yeti/generic/trivial.hpp"
 
 struct empty {};
 
