@@ -21,7 +21,11 @@ static_assert(parser<XXX>);
 
 static_assert(std::copy_constructible<int const>);
 
-constexpr auto k = pure.skip();
+constexpr auto k = pure.drop();
+
+static_assert(unit{} == unit{});
+
+// constexpr int i = k;
 
 struct empty_empty {
   [[no_unique_address]] empty k{};

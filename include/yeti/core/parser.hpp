@@ -10,7 +10,8 @@ namespace yeti {
 namespace impl {
 
 struct mixin_equal {
-  constexpr auto operator==(const mixin_equal &) const -> bool = default;
+  friend constexpr auto
+  operator==(mixin_equal const &, mixin_equal const &) -> bool = default;
 };
 
 } // namespace impl

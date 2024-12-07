@@ -46,6 +46,12 @@ struct combinator final {
   [[nodiscard]] constexpr auto mute(this auto &&self)
       YETI_HOF(combinate(YETI_FWD(self).fn.mute()))
 
+  /**
+   * @brief The same as `.skip().mute()`.
+   */
+  [[nodiscard]] constexpr auto drop(this auto &&self)
+      YETI_HOF(combinate(YETI_FWD(self).fn.skip().mute()))
+
   // ===  === //
   // ===  === //
   // ===  === //

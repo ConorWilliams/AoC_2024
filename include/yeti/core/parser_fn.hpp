@@ -42,6 +42,19 @@ struct result {
 
   [[no_unique_address]] unparsed_type unparsed; ///< Unconsumed input.
   [[no_unique_address]] expected_type expected; ///< The result of the parse.
+
+  /**
+   * @brief Compare two results for equality.
+   */
+  friend constexpr auto
+  operator==(result const &, result const &) -> bool = default;
+
+  /**
+   * @brief Test if the parse was successful.
+   */
+  constexpr explicit operator bool() const noexcept {
+    return expected.has_value();
+  }
 };
 
 /**
