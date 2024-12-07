@@ -14,23 +14,41 @@ template <typename P>
   requires parser<P>
 struct combinator final {
 
+  static_assert(std::same_as<P, strip<P>>);
+
   using type = type_of<P>;
 
   [[no_unique_address]] P fn;
 
+  /**
+   * @brief Apply the parser to the input `stream`.
+   */
   template <typename S = type>
   [[nodiscard]] constexpr auto operator()(this auto &&self, S &&stream)
       YETI_HOF(std::invoke(YETI_FWD(self).fn, YETI_FWD(stream)))
 
-  [[nodiscard]] constexpr auto skip(this auto &&self)
+  template <typename Self>
+    requires ::yeti::combinator<P>
+  [[nodiscard]] constexpr auto skip(this Self &&self)
       YETI_HOF(YETI_FWD(self).fn.skip())
+
+  using skipper = strip<decltype(std::declval<P>().skip())>;
+
+  template <typename Self>
+  [[nodiscard]] constexpr auto skip(this Self &&self) -> combinator<skipper> {
+    return {YETI_FWD(self).fn.skip()};
+  }
+
+  //
 
   [[nodiscard]] constexpr auto mute(this auto &&self)
-      YETI_HOF(YETI_FWD(self).fn.skip())
+      YETI_HOF(YETI_FWD(self).fn.mute())
 
   // ===  === //
   // ===  === //
   // ===  === //
+
+  // [[nodi]]
 };
 
 } // namespace impl::parser_combinator

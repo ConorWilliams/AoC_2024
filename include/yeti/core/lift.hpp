@@ -107,6 +107,8 @@ struct lifted final {
 template <typename F>
 struct skip_mute_base {
 
+  static_assert(std::same_as<F, strip<F>>);
+
   using type = type_of<F>;
 
   [[no_unique_address]] F fn;

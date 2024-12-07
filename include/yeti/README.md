@@ -54,14 +54,31 @@ possible for typed parsers before they are invoked.
 
 ## Combinators
 
+Down-propagating:
+
 - drop
 - skip
 - mute
 
-- desc
+Sequencing:
+
+- then
+- then_ignore
+- ignore_then
+
+Alternation:
+
+- alt
+
+Repetition:
 
 - fold
 - many
+
+Descriptive:
+
+- desc
+- opaque
 
 ## Parsers
 

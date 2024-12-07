@@ -14,7 +14,7 @@ struct empty {};
 
 using namespace yeti;
 
-int test() { pure.skip(); }
+constexpr auto k = pure.skip();
 
 struct empty_empty {
   [[no_unique_address]] empty k{};
