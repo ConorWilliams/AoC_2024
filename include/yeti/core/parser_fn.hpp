@@ -33,8 +33,15 @@ concept error = std::movable<E> && requires (E e) {
  */
 template <std::movable S, std::movable T, std::movable E>
 struct result {
-  [[no_unique_address]] S rest;                    ///< Unconsumed input.
-  [[no_unique_address]] std::expected<T, E> value; ///< The result of the parse.
+
+  using value_type = T;
+  using error_type = E;
+
+  using unparsed_type = S;
+  using expected_type = std::expected<T, E>;
+
+  [[no_unique_address]] unparsed_type unparsed; ///< Unconsumed input.
+  [[no_unique_address]] expected_type expected; ///< The result of the parse.
 };
 
 /**

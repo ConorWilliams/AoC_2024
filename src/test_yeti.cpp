@@ -48,9 +48,11 @@ static_assert(parser_fn<X>);
 
 impl::parser_lift::lifted<X> pp{};
 
+static_assert(parser_fn<decltype(pp), std::string_view>);
+
 // static_assert(std::destructible<>);
 
-constexpr auto p = lift(x).skip();
+constexpr auto p = lift(x).skip().mute();
 constexpr std::string_view sv{"hello"};
 static_assert(
     specialization_of<rebind<decltype(x), std::string_view, unit>, result>);
@@ -67,7 +69,7 @@ static_assert(std::same_as<T, result<std::string_view, unit, int>>);
 
 static_assert(parser_fn<decltype(p), std::string_view const &>);
 constexpr auto y = p(sv);
-static_assert(y.value.value() == unit{});
+static_assert(y.expected.value() == unit{});
 
 // static_assert(
 //     std::same_as<int, parse_error_t<decltype(p), std::string_view const

@@ -9,9 +9,6 @@ namespace yeti {
 
 namespace impl::do_rebind {
 
-template <typename T>
-inline constexpr bool False = false;
-
 template <typename...>
 struct rebind;
 

@@ -61,12 +61,7 @@ template <typename F>
 struct mute_parser;
 
 template <typename F>
-// requires parser_fn<F>
 struct skip_parser;
-
-// using parser_obj_concept::parser_obj_muteable;
-
-// using parser_obj_concept::parser_obj_skippable;
 
 template <typename P>
 concept missing_skip = !parser_obj_concept::parser_obj_skippable<P>;
@@ -148,11 +143,7 @@ struct skip_mute_base {
 // ===  === //
 // ===  === //
 
-template <typename P, typename S>
-using skip_result = result<decay_t<S>, unit, parse_error_t<P, S>>;
-
 template <typename P>
-// requires parser_fn<P>
 struct skip_parser final : skip_mute_base<P> {
 
   template <typename Self, typename S = type_of<P>>
@@ -166,7 +157,7 @@ struct skip_parser final : skip_mute_base<P> {
       return {std::move(rest), {}};
     }
 
-    using Exp = std::expected<unit, parse_error_t<P, S>>;
+    using Exp = rebind<P, S, unit, void>::expected_type;
 
     return {std::move(rest), Exp{std::unexpect, std::move(result).error()}};
   }
@@ -180,6 +171,31 @@ struct skip_parser final : skip_mute_base<P> {
 // ===  === //
 // ===  === //
 // ===  === //
+
+template <typename P>
+struct mute_parser final : skip_mute_base<P> {
+
+  template <typename Self, typename S = type_of<P>>
+    requires parser_fn<P, S>
+  [[nodiscard]] constexpr auto
+  operator()(this Self &&self, S &&stream) -> rebind<P, S, void, unit> {
+
+    auto [rest, result] = std::invoke(YETI_FWD(self).fn, YETI_FWD(stream));
+
+    if (result) {
+      return {std::move(rest), {}};
+    }
+
+    using Exp = rebind<P, S, void, unit>::expected_type;
+
+    return {std::move(rest), Exp{std::unexpect, unit{}}};
+  }
+
+  template <typename Self>
+  [[nodiscard]] constexpr auto mute(this Self &&self) -> Self && {
+    return YETI_FWD(self);
+  }
+};
 
 } // namespace impl::parser_lift
 
