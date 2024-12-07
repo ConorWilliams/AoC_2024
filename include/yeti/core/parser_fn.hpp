@@ -38,11 +38,14 @@ struct result {
 };
 
 /**
- * @brief A customization point for defining the result of parsing a stream.
+ * @brief In the future this _may_ become a customization point.
  */
 template <typename S>
 struct decay : std::decay<S> {};
 
+/**
+ * @brief For now this is just an alias to `std::decay_t`.
+ */
 template <typename S>
 using decay_t = decay<S>::type;
 
@@ -72,7 +75,7 @@ template <typename, typename>
 struct inspect_impl : std::false_type {};
 
 template <typename S, typename T, typename E>
-struct inspect_impl<S, result<std::decay_t<S>, T, E>> : std::true_type {
+struct inspect_impl<S, result<decay_t<S>, T, E>> : std::true_type {
   using value_type = T;
   using error_type = E;
 };
@@ -87,13 +90,6 @@ template <typename P, typename S>
 concept invoke_returns_result =
     std::invocable<P, S> && inspect_result<P, S>::value;
 
-/**
- * @brief Check that `P(S) -> result<S, _, _>` for all invocations.
- *
- * All invocations must return the same result type.
- *
- * This concept is not tolerant of `S = void` and P should be unqualified.
- */
 template <typename P, typename S>
 concept unconstrained_parser_fn_impl =
     invoke_returns_result<P, S>             //
@@ -104,12 +100,16 @@ concept unconstrained_parser_fn_impl =
 
 template <typename P, typename S = void>
 concept unconstrained_parser_fn_help =
-    std::same_as<S, void> || unconstrained_parser_fn_impl<P, S>;
+    pure_void<S> || unconstrained_parser_fn_impl<P, S>;
 
+/**
+ * @brief Check that `P(S) -> result<decay<S>, _, _>` for all invocations.
+ *
+ * This passes if `S` is `void`.
+ */
 template <typename P, typename S = void>
 concept unconstrained_parser_fn =
-    std::move_constructible<P>                                  //
-    && unconstrained_parser_fn_help<std::remove_cvref_t<P>, S>; //
+    unconstrained_parser_fn_help<std::remove_cvref_t<P>, S>; //
 
 // ===  === //
 // ===  === //
@@ -138,17 +138,30 @@ using parse_value_t = detail::parse_result<P, S>::value_type;
 template <typename P, typename S = void>
 using parse_error_t = detail::parse_result<P, S>::error_type;
 
-// For better error messages
-template <typename P, typename S = void, typename T = void>
+/**
+ * @brief Verify that `P(S)` returns a `result<_, T, _>`.
+ *
+ * If `S` is `void` then this will fail unless `T` is `void`.
+ *
+ * For better error messages this is a named concept
+ */
+template <typename P, typename S, typename T = void>
 concept value_matches_request = either<T, void, parse_value_t<P, S>>;
 
-template <typename P, typename S = void, typename E = void>
+/**
+ * @brief Verify that `P(S)` returns a `result<_, _, E>`.
+ *
+ * If `S` is `void` then this will fail unless `E` is `void`.
+ *
+ * For better error messages this is a named concept
+ */
+template <typename P, typename S, typename E = void>
 concept error_matches_request = either<E, void, parse_error_t<P, S>>;
 
 /**
- * @brief Check that `P(S) -> result<S, T, E>
+ * @brief Check that `P(S) -> result<S, T, E>`.
  *
- * Specify any of S, T, E as `void` to ignore.
+ * Specify any of `S`, `T`, `E` as `void` to ignore.
  */
 template <typename P, typename S = void, typename T = void, typename E = void>
 concept untyped_parser_fn = unconstrained_parser_fn<P, S>      //
@@ -160,16 +173,37 @@ concept untyped_parser_fn = unconstrained_parser_fn<P, S>      //
 // ===  === //
 
 template <typename P, typename S = void>
-concept static_type_matches =
-    either<void, S, static_type_of<P>> || std::same_as<S, static_type_of<P>>;
+concept type_matches =
+    either<void, S, type_of<P>> || std::common_with<S, type_of<P>>;
+
+template <typename P, typename S1, typename S2>
+concept same_invoke_result =
+    std::same_as<std::invoke_result_t<P, S1>, std::invoke_result_t<P, S2>>;
+
+/**
+ * @brief
+ *
+ * Assuming `S1 <- S` and `S2 <- type_of<P>`
+ *
+ * Match (S1, S2):
+ *    (void, void) => untyped_parser_fn<P, void, T, E>  // Fails if T/E not void
+ *    (void, S2)    => untyped_parser_fn<P, S2, T, E>
+ *    (S1, void)    => untyped_parser_fn<P, S1, T, E>
+ *    (S1, S2)       => UPF<P, S1, T, E> && UPF<P, S2, T, E> && same-result
+ */
+template <typename P, typename S1, typename S2, typename T, typename E>
+concept parser_fn_help =
+    (pure_void<S1> || untyped_parser_fn<P, S1, T, E>) &&
+    (pure_void<S2> || untyped_parser_fn<P, S2, T, E>) &&
+    (either<void, S1, S2> || same_invoke_result<P, S1, S2>);
 
 /**
  * @brief The lowest level of the parser concept.
  */
 template <typename P, typename S = void, typename T = void, typename E = void>
-concept parser_fn = std::move_constructible<P>                        //
-                    && static_type_matches<P, S>                      //
-                    && untyped_parser_fn<P, else_static<S, P>, T, E>; //
+concept parser_fn = std::move_constructible<P>                 //
+                    && type_matches<P, S>                      //
+                    && parser_fn_help<P, type_of<P>, S, T, E>; //
 
 } // namespace impl::parser_fn_concept
 
@@ -230,7 +264,7 @@ struct rebind<result<S, T, E>, void, void> {
  * `P(S) -> result<`S, 'T if is_void<T> else T, 'E if is_void<E> else E>`.
  */
 template <typename P, typename S = void, typename T = void, typename E = void>
-  requires parser_fn<P, S> && (typed<P> || different_from<S, void>)
+  requires parser_fn<P, S> && (typed<P> || not_void<S>)
 using rebind = impl::rebind<std::invoke_result_t<P, S>, T, E>::type;
 
 } // namespace yeti

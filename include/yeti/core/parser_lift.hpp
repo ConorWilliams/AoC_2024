@@ -96,7 +96,7 @@ using parser_obj_concept::parser_obj_skippable;
 template <parser_fn F>
 struct lift {
 
-  using type = static_type_of<F>;
+  using type = type_of<F>;
 
   F fn;
 

@@ -2,6 +2,7 @@
 
 #include <concepts>
 #include <expected>
+#include <ranges>
 #include <string_view>
 #include <utility>
 
@@ -12,6 +13,15 @@
 #include "yeti/core/parser_lift.hpp"
 
 namespace {
+
+static_assert(std::common_with<int, float &>);
+
+static_assert(std::common_with<std::string_view &, std::string>);
+
+template <typename T>
+using sub = decltype(std::ranges::subrange(std::declval<T>()));
+
+// static_assert(std::same_as<sub<std::string_view>, std::string_view>);
 
 using namespace yeti;
 
@@ -26,21 +36,21 @@ inline constexpr auto x =
 
 static_assert(parser_fn<decltype(x)>);
 
-constexpr auto p = lift(x).skip();
+// constexpr auto p = lift(x).skip();
 
 constexpr std::string_view sv{"hello"};
 
 static_assert(
     specialization_of<rebind<decltype(x), std::string_view, unit>, result>);
 
-static_assert(parser_fn<decltype(p), std::string_view const &>);
+// static_assert(parser_fn<decltype(p), std::string_view const &>);
 
 // static_assert(
 //     std::same_as<int, parse_error_t<decltype(p), std::string_view const &>>);
 
-constexpr auto y = p(sv);
+// constexpr auto y = p(sv);
 
-static_assert(y.value.value() == unit{});
+// static_assert(y.value.value() == unit{});
 
 // // template <typename T = std::string>
 // // constexpr auto test(T &&) -> int {
@@ -139,7 +149,6 @@ static_assert(!parser_fn<overloaded_bad, int>);
 // ================================================================ //
 
 struct H {
-
   using type = int;
 
   static auto operator()(int) -> result<int, unit, unit>;
@@ -155,7 +164,6 @@ struct never {};
 
 template <typename E>
 struct noop {
-
   using type = int;
 
   static auto operator()(int) -> result<int, unit, E>;

@@ -31,6 +31,12 @@ struct unit : impl::mixin_equal {
  */
 namespace impl::parser_concept {
 
+/**
+ * @brief If `S` is void then use the static type of `P`.
+ */
+template <typename S, typename P>
+using else_static = std::conditional_t<std::is_void_v<S>, type_of<P>, S>;
+
 template <typename P>
 concept self_skip = std::same_as<P, skip_result_t<P>>;
 
@@ -49,8 +55,7 @@ struct parser_impl : std::false_type {};
 
 // If neither P or S know the stream type then don't check for unit.
 template <typename P, typename S, typename T>
-using mute_recur_help =
-    parser_impl<P, S, T, unit_unless_void<S, static_type_of<P>>>;
+using mute_recur_help = parser_impl<P, S, T, unit_unless_void<S, type_of<P>>>;
 
 // Propagate static type into recursive call
 template <typename P, typename S, typename T>
@@ -58,8 +63,7 @@ using mute_recur = mute_recur_help<mute_result_t<P>, else_static<S, P>, T>;
 
 // If neither P or S know the stream type then don't check for unit.
 template <typename P, typename S, typename E>
-using skip_recur_help =
-    parser_impl<P, S, unit_unless_void<S, static_type_of<P>>, E>;
+using skip_recur_help = parser_impl<P, S, unit_unless_void<S, type_of<P>>, E>;
 
 // Propagate static type into recursive call
 template <typename P, typename S, typename E>
@@ -102,11 +106,11 @@ concept canonical_parser = parser_impl<P, S, T, E>::value;
 
 template <typename P, typename S = void, typename E = void>
 concept core_parser_skip_help =
-    parser_obj<P, S, unit_unless_void<S, static_type_of<P>>, E>;
+    parser_obj<P, S, unit_unless_void<S, type_of<P>>, E>;
 
 template <typename P, typename S = void, typename T = void>
 concept core_parser_mute_help =
-    parser_obj<P, S, T, unit_unless_void<S, static_type_of<P>>>;
+    parser_obj<P, S, T, unit_unless_void<S, type_of<P>>>;
 
 /**
  * @brief Yeti's defining concept, the parser.
@@ -135,8 +139,8 @@ using impl::parser_concept::parser;
  */
 template <typename P, typename Q>
 concept parser_like =
-    parser_fn<Q>                                                         //
-    && parser<P, static_type_of<Q>, parse_value_t<Q>, parse_error_t<Q>>; //
+    parser_fn<Q>                                                  //
+    && parser<P, type_of<Q>, parse_value_t<Q>, parse_error_t<Q>>; //
 
 } // namespace yeti
 
