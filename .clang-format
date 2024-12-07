@@ -13,6 +13,9 @@ BinPackParameters : false
 LambdaBodyIndentation : Signature
 PenaltyReturnTypeOnItsOwnLine : 1
 
+Macros:
+- YETI_HOF(x)={x};
+
 SpaceBeforeParens: Custom
 SpaceBeforeParensOptions:
     AfterRequiresInClause: true

@@ -2,6 +2,7 @@
 #define DC2FEF19_9F77_4C43_B38F_7FF83C9748EA
 
 #include <concepts>
+#include <type_traits>
 
 /**
  * @brief Self contained generic utilities not tied to yeti.
@@ -46,9 +47,14 @@ concept pure_void = std::same_as<void, T>;
 template <typename T>
 concept not_void = different_from<void, T>;
 
+template <typename T>
+using strip = std::remove_cvref_t<T>;
+
 template <typename T, typename U>
-concept same_as_stripped =
-    std::same_as<std::remove_cvref_t<T>, std::remove_cvref_t<U>>;
+concept same_as_stripped = std::same_as<strip<T>, strip<U>>;
+
+template <typename T>
+concept nothrow_storable = std::is_nothrow_constructible_v<strip<T>, T>;
 
 namespace impl {
 

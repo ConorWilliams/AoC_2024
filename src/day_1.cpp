@@ -24,8 +24,6 @@ auto parse(std::string const &fname) -> Parsed {
 
   std::println("{}", file);
 
-  // clang-format offl
-
   parser auto p = number<int> //
                       .seq_left(ws.plus())
                       .seq(number<int>)
@@ -58,7 +56,9 @@ int main() try {
   std::ranges::sort(p.lhs);
   std::ranges::sort(p.rhs);
 
-  auto abs_diff = [](int a, int b) { return std::abs(a - b); };
+  auto abs_diff = [](int a, int b) {
+    return std::abs(a - b);
+  };
 
   auto all_diffs = views::zip_transform(abs_diff, p.lhs, p.rhs);
 
@@ -78,8 +78,9 @@ int main() try {
     counts[x] += 1;
   }
 
-  auto sims =
-      p.lhs | views::transform([&counts](int x) { return x * counts[x]; });
+  auto sims = p.lhs | views::transform([&counts](int x) {
+                return x * counts[x];
+              });
 
   auto sim = std::ranges::fold_left(sims, 0, std::plus{});
 

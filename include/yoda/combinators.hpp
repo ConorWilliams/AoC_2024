@@ -180,13 +180,9 @@ using rep_vector_t = std::vector<parser_t<P>>;
 
 struct rep_impl {
 
-  // clang-format off
-
   template <parser P>
-  constexpr auto 
-  operator()(P p, std::size_t min, std::size_t max) -> parser_of<rep_vector_t<P>> auto {
-
-    // clang-format on
+  constexpr auto operator()(P p, std::size_t min, std::size_t max)
+      -> parser_of<rep_vector_t<P>> auto {
 
     using S = result<std::vector<parser_t<P>>>;
 

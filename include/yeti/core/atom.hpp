@@ -4,6 +4,7 @@
 #include <string_view>
 #include <utility>
 
+#include "yeti/core/combinator.hpp"
 #include "yeti/core/parser.hpp"
 
 /**
@@ -30,11 +31,11 @@ struct never : impl::mixin_equal {
  * The methods of this placeholder are not defined, this is for
  * satisfying the type system not for implementing the methods.
  */
-struct placeholder {
+struct todo {
   template <typename T>
   static constexpr auto operator()(T) -> result<T, unit, unit>;
-  static constexpr auto skip() -> placeholder;
-  static constexpr auto mute() -> placeholder;
+  static constexpr auto skip() -> todo;
+  static constexpr auto mute() -> todo;
 };
 
 } // namespace yeti

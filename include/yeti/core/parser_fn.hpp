@@ -115,8 +115,7 @@ concept unconstrained_parser_fn_help =
  * This passes if `S` is `void`.
  */
 template <typename P, typename S = void>
-concept unconstrained_parser_fn =
-    unconstrained_parser_fn_help<std::remove_cvref_t<P>, S>; //
+concept unconstrained_parser_fn = unconstrained_parser_fn_help<strip<P>, S>; //
 
 // ===  === //
 // ===  === //
@@ -209,8 +208,7 @@ concept parser_fn_help =
  */
 template <typename P, typename S = void, typename T = void, typename E = void>
 concept parser_fn =                            //
-    std::move_constructible<P>                 //
-    && std::is_nothrow_move_constructible_v<P> //
+    std::copy_constructible<P>                 //
     && type_matches<P, S>                      //
     && parser_fn_help<P, type_of<P>, S, T, E>; //
 

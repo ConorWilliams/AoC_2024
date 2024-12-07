@@ -34,16 +34,20 @@ using sub = decltype(std::ranges::subrange(std::declval<T>()));
 
 using namespace yeti;
 
-inline constexpr auto x =
-    [](std::string_view sv) -> result<std::string_view, char, int> {
-  if (sv.starts_with("h")) {
-    return {sv.substr(1), 'h'};
-  }
+struct pure {
+  static constexpr auto
+  operator()(std::string_view sv) -> result<std::string_view, char, int> {
+    if (sv.starts_with("h")) {
+      return {sv.substr(1), 'h'};
+    }
 
-  return {sv, std::unexpected(1)};
+    return {sv, std::unexpected(1)};
+  }
 };
 
-using X = decltype(x);
+inline constexpr auto x = pure{};
+
+using X = pure;
 
 static_assert(parser_fn<X>);
 
@@ -82,7 +86,7 @@ struct half { //
     return {sv, std::unexpected(1)};
   }
 
-  constexpr auto skip() -> placeholder { return {}; }
+  constexpr auto skip() -> todo { return {}; }
 };
 
 static_assert(parser_fn<half, std::string_view>);
@@ -90,6 +94,15 @@ static_assert(parser_fn<half, std::string_view>);
 constexpr auto _ = half{}.skip();
 
 constexpr auto s = lift(half{}).skip().mute();
+
+template <typename T>
+struct CTAD {
+  T x;
+};
+
+constexpr int j = 0;
+
+// int i = std::type_identity<decltype(CTAD{j})>{};
 
 // static_assert(
 //     std::same_as<int, parse_error_t<decltype(p), std::string_view const

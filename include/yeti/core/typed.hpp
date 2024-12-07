@@ -23,7 +23,7 @@ struct type_impl<T> : std::type_identity<typename T::type> {};
  * @brief Fetch the `::type` member, or `void` if not present.
  */
 template <typename T>
-using type_of = impl::type_impl<std::remove_cvref_t<T>>::type;
+using type_of = impl::type_impl<strip<T>>::type;
 
 /**
  * @brief Test if a typed defines a non-void `::type` member.

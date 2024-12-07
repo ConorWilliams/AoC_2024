@@ -39,8 +39,9 @@ template <typename P>
  */
 template <typename P>
   requires parser_fn<P>
-[[nodiscard]] constexpr auto lift(P parser) noexcept -> parser_like<P> auto {
-  return impl::parser_lift::lifted<P>{std::move(parser)};
+[[nodiscard]] constexpr auto
+lift(P &&parser) noexcept(nothrow_storable<P>) -> parser_like<P> auto {
+  return impl::parser_lift::lifted<strip<P>>{YETI_FWD(parser)};
 }
 
 // ===  === //
@@ -64,42 +65,36 @@ concept missing_mute = !parser_obj_concept::parser_obj_muteable<P>;
 template <parser_fn F>
 struct lifted final {
 
+  static_assert(std::same_as<F, strip<F>>);
+
   using type = type_of<F>;
 
   [[no_unique_address]] F fn;
 
-  // clang-format off
-
-  template <typename Self>
-  [[nodiscard]] constexpr auto skip(this Self &&self) 
-      YETI_HOF(std::forward<Self>(self).fn.skip())
+  [[nodiscard]] constexpr auto skip(this auto &&self)
+      YETI_HOF(YETI_FWD(self).fn.skip())
 
   // Subsume above.
   template <typename Self>
     requires missing_skip<F>
-  [[nodiscard]] constexpr auto skip(this Self &&self) 
+  [[nodiscard]] constexpr auto skip(this Self &&self)
       YETI_HOF(skip_parser<lifted>{YETI_FWD(self)})
 
   // ===
 
-  template <typename Self>
-  [[nodiscard]] constexpr auto mute(this Self &&self) 
-      YETI_HOF(std::forward<Self>(self).fn.mute())
-
+  [[nodiscard]] constexpr auto mute(this auto &&self)
+      YETI_HOF(YETI_FWD(self).fn.mute())
 
   // Subsume above.
   template <typename Self>
     requires missing_mute<F>
-  [[nodiscard]] constexpr auto mute(this Self &&self) 
+  [[nodiscard]] constexpr auto mute(this Self &&self)
       YETI_HOF(mute_parser<lifted>{YETI_FWD(self)})
 
   // Behave like the `parse_fn` itself.
-
-  template <typename Self, typename S = type>
-  [[nodiscard]] constexpr auto operator()(this Self &&self, S &&stream)
+  template <typename S = type>
+  [[nodiscard]] constexpr auto operator()(this auto &&self, S &&stream)
       YETI_HOF(std::invoke(YETI_FWD(self).fn, YETI_FWD(stream)))
-
-  // clang-format on
 };
 
 // ===  === //
@@ -116,19 +111,11 @@ struct skip_mute_base {
 
   [[no_unique_address]] F fn;
 
-  // clang-format off
+  [[nodiscard]] constexpr auto skip(this auto &&self)
+      YETI_HOF(YETI_FWD(self).fn.skip())
 
-  template <typename Self>
-    // requires parser_obj_skippable<F>
-  [[nodiscard]] constexpr auto skip(this Self &&self) 
-      YETI_HOF(std::forward<Self>(self).fn.skip())
-
-  template <typename Self>
-    // requires parser_obj_muteable<F>
-  [[nodiscard]] constexpr auto mute(this Self &&self) 
-      YETI_HOF(std::forward<Self>(self).fn.skip())
-
-  // clang-format on
+  [[nodiscard]] constexpr auto mute(this auto &&self)
+      YETI_HOF(YETI_FWD(self).fn.skip())
 };
 
 // ===  === //
