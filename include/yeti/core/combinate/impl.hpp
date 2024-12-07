@@ -32,11 +32,11 @@ struct combinator final {
   [[nodiscard]] constexpr auto skip(this Self &&self)
       YETI_HOF(YETI_FWD(self).fn.skip())
 
-  using skipper = strip<decltype(std::declval<P>().skip())>;
+  using skipper = strip<skip_result_t<P>>;
 
   template <typename Self>
-  [[nodiscard]] constexpr auto skip(this Self &&self) -> combinator<skipper> {
-    return {YETI_FWD(self).fn.skip()};
+  [[nodiscard]] constexpr auto skip(this Self &&self) -> auto {
+    return YETI_FWD(self).fn.skip();
   }
 
   //
