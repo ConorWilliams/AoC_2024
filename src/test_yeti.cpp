@@ -12,6 +12,10 @@
 
 struct empty {};
 
+using namespace yeti;
+
+int test() { pure.skip(); }
+
 struct empty_empty {
   [[no_unique_address]] empty k{};
 };
@@ -28,8 +32,6 @@ template <typename T>
 using sub = decltype(std::ranges::subrange(std::declval<T>()));
 
 // static_assert(std::same_as<sub<std::string_view>, std::string_view>);
-
-using namespace yeti;
 
 struct pure {
   static constexpr auto

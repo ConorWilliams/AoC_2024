@@ -45,16 +45,11 @@ struct result {
 };
 
 /**
- * @brief In the future this _may_ become a customization point.
+ * @brief An alias for `result` that strips `S`.
  */
-template <typename S>
-struct decay : std::decay<S> {};
-
-/**
- * @brief For now this is just an alias to `std::decay_t`.
- */
-template <typename S>
-using decay_t = decay<S>::type;
+template <typename S, std::movable T, std::movable E>
+  requires std::movable<strip<S>>
+using resulting = result<strip<S>, T, E>;
 
 // ===  === //
 // ===  === //
@@ -82,7 +77,7 @@ template <typename, typename>
 struct inspect_impl : std::false_type {};
 
 template <typename S, typename T, typename E>
-struct inspect_impl<S, result<decay_t<S>, T, E>> : std::true_type {
+struct inspect_impl<S, result<strip<S>, T, E>> : std::true_type {
   using value_type = T;
   using error_type = E;
 };
@@ -110,7 +105,7 @@ concept unconstrained_parser_fn_help =
     pure_void<S> || unconstrained_parser_fn_impl<P, S>;
 
 /**
- * @brief Check that `P(S) -> result<decay<S>, _, _>` for all invocations.
+ * @brief Check that `P(S) -> result<strip<S>, _, _>` for all invocations.
  *
  * This passes if `S` is `void`.
  */

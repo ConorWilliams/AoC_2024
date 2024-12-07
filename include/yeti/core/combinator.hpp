@@ -34,7 +34,7 @@ concept combinator_like =
 // ===  === //
 // ===  === //
 
-// NOTE: Combinator could include an overload for parser_fn, but it hurts
+// NOTE: `combinate` could include an overload for parser_fn, but it hurts
 // compile times due to the constant need to disambiguate between the
 // `parser`/`parser_fn`/`combinator` which is quite a hard subsumption
 // problem for the compiler to resolve.
@@ -45,14 +45,14 @@ concept combinator_like =
 template <typename P>
   requires parser<P>
 [[nodiscard]] constexpr auto
-combinate(P &&p) noexcept(nothrow_storable<P>) -> combinator<P> auto {
-  return impl::parser_combinator::combinator<strip<P>>{YETI_FWD(p)};
+combinate(P &&parser) noexcept(nothrow_storable<P>) -> combinator<P> auto {
+  return impl::parser_combinator::combinator<strip<P>>{YETI_FWD(parser)};
 }
 
 template <typename P>
   requires combinator<P>
-[[nodiscard]] constexpr auto combinate(P &&p) noexcept -> P && {
-  return YETI_FWD(p);
+[[nodiscard]] constexpr auto combinate(P &&parser) noexcept -> P && {
+  return YETI_FWD(parser);
 }
 
 } // namespace yeti

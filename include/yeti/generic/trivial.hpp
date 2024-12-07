@@ -7,6 +7,7 @@
 #include <utility>
 
 #include "yeti/core.hpp"
+#include "yeti/core/generics.hpp"
 
 /**
  * @brief Some of the most fundamental parsers.
@@ -22,42 +23,10 @@ namespace yeti {
  */
 struct todo {
   template <typename T>
-  static constexpr auto operator()(T &&) -> result<strip<T>, unit, unit>;
+  static constexpr auto operator()(T &&) -> resulting<T, unit, unit>;
   static constexpr auto skip() -> todo;
   static constexpr auto mute() -> todo;
 };
-
-// ===  === //
-// ===  === //
-// ===  === //
-
-namespace impl::eos_impl {
-
-struct eos {
-
-  static constexpr auto skip() noexcept -> eos { return {}; }
-
-  static constexpr auto mute() noexcept -> eos { return {}; }
-
-  template <storable S>
-  static constexpr auto operator()(S &&stream) -> result<decay<S>, unit, unit>
-    requires requires { std::ranges::empty(YETI_FWD(stream)); }
-  {
-    if (std::ranges::empty(stream)) {
-      return {YETI_FWD(stream), {}};
-    }
-    return {YETI_FWD(stream), {std::unexpect, unit{}}};
-  }
-};
-
-} // namespace impl::eos_impl
-
-/**
- * @brief The EOS parser succeeds if the input stream is empty.
- *
- * This uses the `std::ranges::empty` function to check if the stream is empty.
- */
-inline constexpr auto eos = combinate(impl::eos_impl::eos{});
 
 // ===  === //
 // ===  === //
@@ -83,8 +52,8 @@ namespace impl::fail_impl {
 
 struct fail {
   template <storable S>
-  static constexpr auto
-  operator()(S &&stream) -> result<decay<S>, never, unit> {
+  static constexpr auto operator()(S &&stream) noexcept(nothrow_storable<S>)
+      -> resulting<S, never, unit> {
     return {YETI_FWD(stream), {std::unexpect, unit{}}};
   }
 };
@@ -92,9 +61,64 @@ struct fail {
 } // namespace impl::fail_impl
 
 /**
- * @brief The fail parser always fails.
+ * @brief This parser fails without consuming any input.
  */
 inline constexpr auto fail = combinate(lift(impl::fail_impl::fail{}));
+
+// ===  === //
+// ===  === //
+// ===  === //
+
+namespace impl::pure_impl {
+
+struct pure {
+  template <storable S>
+  static constexpr auto operator()(S &&stream) noexcept(nothrow_storable<S>)
+      -> resulting<S, unit, never> {
+    return {YETI_FWD(stream), {}};
+  }
+};
+
+} // namespace impl::pure_impl
+
+/**
+ * @brief The pure parser always succeeds without consuming any input.
+ */
+inline constexpr auto pure = combinate(lift(impl::pure_impl::pure{}));
+
+// ===  === //
+// ===  === //
+// ===  === //
+
+namespace impl::eos_impl {
+
+struct eos {
+
+  static constexpr auto skip() noexcept -> eos { return {}; }
+
+  static constexpr auto mute() noexcept -> eos { return {}; }
+
+  template <storable S>
+  static constexpr auto operator()(S &&stream) -> resulting<S, unit, unit>
+    requires requires { std::ranges::empty(YETI_FWD(stream)); }
+  {
+    if (std::ranges::empty(stream)) {
+      return {YETI_FWD(stream), {}};
+    }
+    return {YETI_FWD(stream), {std::unexpect, unit{}}};
+  }
+};
+
+} // namespace impl::eos_impl
+
+/**
+ * @brief The EOS parser succeeds if the input stream is empty.
+ *
+ * This uses the `std::ranges::empty` function to check if the stream is empty.
+ *
+ * This parser does not consume any input.
+ */
+inline constexpr auto eos = combinate(impl::eos_impl::eos{});
 
 } // namespace yeti
 
