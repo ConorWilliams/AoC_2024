@@ -38,6 +38,12 @@ namespace yeti {
 template <typename T, typename... Args>
 concept either = (std::same_as<T, Args> || ...);
 
+/**
+ * @brief Test if two types are different.
+ */
+template <typename T, typename U>
+concept different_from = !std::same_as<T, U>;
+
 namespace impl {
 
 template <typename, template <typename...> typename>

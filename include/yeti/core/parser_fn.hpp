@@ -8,6 +8,7 @@
 #include <type_traits>
 
 #include "yeti/core/generics.hpp"
+#include "yeti/core/typed.hpp"
 
 namespace yeti {
 
@@ -36,42 +37,14 @@ struct result {
   [[no_unique_address]] std::expected<T, E> value; ///< The result of the parse.
 };
 
-// ===  === //
-// ===  === //
-// ===  === //
-
-namespace impl {
-
-template <typename>
-struct static_type_impl : std::type_identity<void> {};
-
-template <typename T>
-  requires requires { typename T::type; }
-struct static_type_impl<T> : std::type_identity<typename T::type> {};
-
-} // namespace impl
-
 /**
- * @brief Fetch the `::type` member, or `void` if not present.
+ * @brief A customization point for defining the result of parsing a stream.
  */
-template <typename T>
-using static_type_of = impl::static_type_impl<std::remove_cvref_t<T>>::type;
+template <typename S>
+struct decay : std::decay<S> {};
 
-/**
- * @brief Test if a typed defines a non-void `::type` member.
- */
-template <typename T>
-concept typed = !std::same_as<static_type_of<T>, void>;
-
-namespace impl {
-
-/**
- * @brief If `S` is void then use the static type of `P`.
- */
-template <typename S, typename P>
-using else_static = std::conditional_t<std::is_void_v<S>, static_type_of<P>, S>;
-
-} // namespace impl
+template <typename S>
+using decay_t = decay<S>::type;
 
 // ===  === //
 // ===  === //
