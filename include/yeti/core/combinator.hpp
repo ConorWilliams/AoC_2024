@@ -34,10 +34,20 @@ concept combinator_like =
 // ===  === //
 // ===  === //
 
+namespace impl {
+
+template <typename P>
+using combinate_t = parser_combinator::combinator<strip<P>>;
+
+}
+
 // NOTE: `combinate` could include an overload for parser_fn, but it hurts
 // compile times due to the constant need to disambiguate between the
 // `parser`/`parser_fn`/`combinator` which is quite a hard subsumption
 // problem for the compiler to resolve.
+
+// NOTE: Unlike `lift` combinate must have a non-deduced return type, this
+// allows `combinator` to call it without triggering infinite recursion.
 
 /**
  * @brief ...
@@ -45,8 +55,8 @@ concept combinator_like =
 template <typename P>
   requires parser<P>
 [[nodiscard]] constexpr auto
-combinate(P &&parser) noexcept(nothrow_storable<P>) -> combinator<P> auto {
-  return impl::parser_combinator::combinator<strip<P>>{YETI_FWD(parser)};
+combinate(P &&parser) noexcept(nothrow_storable<P>) -> impl::combinate_t<P> {
+  return {YETI_FWD(parser)};
 }
 
 template <typename P>

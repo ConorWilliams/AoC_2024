@@ -35,9 +35,15 @@ struct combinator final {
 
   using skipper = strip<skip_result_t<P>>;
 
+  // template <typename Self>
+  // [[nodiscard]] constexpr auto skip(this Self &&self) -> combinator<skipper>
+  // {
+  //   return {YETI_FWD(self).fn.skip()};
+  // }
+
   template <typename Self>
-  [[nodiscard]] constexpr auto skip(this Self &&self) -> combinator<skipper> {
-    return {YETI_FWD(self).fn.skip()};
+  [[nodiscard]] constexpr auto skip(this Self &&self) -> auto {
+    return combinate(YETI_FWD(self).fn.skip());
   }
 
   //
