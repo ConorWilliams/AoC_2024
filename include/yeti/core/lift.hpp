@@ -183,7 +183,7 @@ struct mute_parser final : skip_mute_base<P> {
     auto [rest, result] = std::invoke(YETI_FWD(self).fn, YETI_FWD(stream));
 
     if (result) {
-      return {std::move(rest), {}};
+      return {std::move(rest), {std::move(result).value()}};
     }
 
     using Exp = rebind<P, S, void, unit>::expected_type;
