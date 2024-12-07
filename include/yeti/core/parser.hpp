@@ -38,10 +38,10 @@ template <typename S, typename P>
 using else_static = std::conditional_t<std::is_void_v<S>, type_of<P>, S>;
 
 template <typename P>
-concept self_skip = std::same_as<P, skip_result_t<P>>;
+concept self_skip = same_as_stripped<P, skip_result_t<P>>;
 
 template <typename P>
-concept self_mute = std::same_as<P, mute_result_t<P>>;
+concept self_mute = same_as_stripped<P, mute_result_t<P>>;
 
 template <typename... S>
 using unit_unless_void =

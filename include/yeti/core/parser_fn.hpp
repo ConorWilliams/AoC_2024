@@ -201,9 +201,11 @@ concept parser_fn_help =
  * @brief The lowest level of the parser concept.
  */
 template <typename P, typename S = void, typename T = void, typename E = void>
-concept parser_fn = std::move_constructible<P>                 //
-                    && type_matches<P, S>                      //
-                    && parser_fn_help<P, type_of<P>, S, T, E>; //
+concept parser_fn =                            //
+    std::move_constructible<P>                 //
+    && std::is_nothrow_move_constructible_v<P> //
+    && type_matches<P, S>                      //
+    && parser_fn_help<P, type_of<P>, S, T, E>; //
 
 } // namespace impl::parser_fn_concept
 

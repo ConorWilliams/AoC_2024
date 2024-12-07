@@ -9,23 +9,19 @@
 
 namespace yeti {
 
-// clang-format off
-
 /**
  * @brief Use like `BOOST_HOF_RETURNS` to define a function/lambda with all
- * the noexcept/requires/decltype specifiers.
+ * the noexcept/decltype specifiers.
+ *
+ * This implementation deliberately omits the `requires` clause to allow
+ * for subsumption by more-constrained implementations via a concept. This
+ * does not make them any less SFINAE friendly due to the return specification.
  *
  * This macro is not semantically variadic but the ``...`` allows commas in
  * the macro argument.
  */
 #define YETI_HOF(...)                                                          \
-  noexcept(noexcept(__VA_ARGS__)) -> decltype(__VA_ARGS__)                     \
-    requires requires { __VA_ARGS__; }                                         \
-  {                                                                            \
-    return __VA_ARGS__;                                                        \
-  }
-
-// clang-format on
+  noexcept(noexcept(__VA_ARGS__))->decltype(__VA_ARGS__) { return __VA_ARGS__; }
 
 /**
  * @brief Love to hate it, hate to love it, love to have it.
@@ -49,6 +45,10 @@ concept pure_void = std::same_as<void, T>;
 
 template <typename T>
 concept not_void = different_from<void, T>;
+
+template <typename T, typename U>
+concept same_as_stripped =
+    std::same_as<std::remove_cvref_t<T>, std::remove_cvref_t<U>>;
 
 namespace impl {
 

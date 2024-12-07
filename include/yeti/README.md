@@ -2,11 +2,13 @@
 
 In yeti parsers are passed by value, this follows the precedent of passing functions value in the `std::`.
 
+Many types in yeti use deducing `this`, these types are marked as final as they are not inheritance proofed.
+
 ## The parser hierarchy
 
 __Parser function__: `parser_fn: P -> S -> T -> E -> bool`
 
-1. Is a move constructible type.
+1. Is a non-throwing move-constructible type.
 2. If `P` defines a `::type` then `X <- ::type` else `X <- void`.
 3. If `X` and `S` are both non-void then `X` is `std::common_with` `S`.
 4. Can be invoked with an `S` to produce a `result<yeti::decay_t<S>, T, E>`.
@@ -27,7 +29,7 @@ __Parser__: `parser: P -> S -> T -> E -> bool`
 1. Is a `parser_fn<P, S, T, E>`
 2. Has `.skip()` and `.mute()` methods.
 3. The methods in (2) must be valid for all VC.
-4. The methods in (3) must return the same type independent of the VC.
+4. The methods in (3) must return the same type (modulo const/volatile/ref) independent of the VC.
 5. The result of `.skip()` is a `parser<_, 'S, U, E>`.
 6. The result of `.mute()` is a `parser<_, 'S, T, U>`.
 

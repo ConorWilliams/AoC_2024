@@ -21,9 +21,9 @@ using skip_result_t = decltype(std::declval<P>().skip());
 
 template <typename P, typename Q>
 concept similar_skippable =
-    skippable<P>                                         //
-    && skippable<Q>                                      //
-    && std::same_as<skip_result_t<P>, skip_result_t<Q>>; //
+    skippable<P>    //
+    && skippable<Q> //
+    && same_as_stripped<skip_result_t<P>, skip_result_t<Q>>;
 
 /**
  * @brief Check that `P.skip() -> _` is valid for all invocations.

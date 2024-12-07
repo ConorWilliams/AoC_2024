@@ -7,6 +7,8 @@
 #include "yeti/core/generics.hpp"
 #include "yeti/core/parser_fn.hpp"
 #include "yeti/core/parser_obj.hpp"
+#include <type_traits>
+#include <utility>
 #include <yeti/core/parser.hpp>
 
 /**
@@ -15,18 +17,27 @@
 
 namespace yeti {
 
+struct dummy {
+  template <typename T>
+  static constexpr auto operator()(T) -> result<T, unit, unit>;
+  static constexpr auto skip() -> dummy;
+  static constexpr auto mute() -> dummy;
+};
+
 namespace impl::parser_lift {
+
 template <parser_fn F>
-struct lift;
-}
+struct lifted;
+
+} // namespace impl::parser_lift
 
 /**
  * @brief Short-circuit for parsers.
  */
 template <typename P>
   requires parser<P>
-constexpr auto lift(P &&parser) noexcept -> P && {
-  return std::forward<P>(parser);
+[[nodiscard]] constexpr auto lift(P &&parser) noexcept -> P && {
+  return YETI_FWD(parser);
 }
 
 /**
@@ -34,8 +45,8 @@ constexpr auto lift(P &&parser) noexcept -> P && {
  */
 template <typename P>
   requires parser_fn<P>
-constexpr auto lift(P &&parser) -> parser_like<P> auto {
-  return impl::parser_lift::lift<P>{std::forward<P>(parser)};
+[[nodiscard]] constexpr auto lift(P parser) noexcept -> parser_like<P> auto {
+  return impl::parser_lift::lifted<P>{std::move(parser)};
 }
 
 // ===  === //
@@ -44,13 +55,107 @@ constexpr auto lift(P &&parser) -> parser_like<P> auto {
 
 namespace impl::parser_lift {
 
+template <typename F>
+// requires parser_fn<F>
+struct mute_parser;
+
+template <typename F>
+// requires parser_fn<F>
+struct skip_parser;
+
+// using parser_obj_concept::parser_obj_muteable;
+
+// using parser_obj_concept::parser_obj_skippable;
+
+template <typename P>
+concept missing_skip = !parser_obj_concept::parser_obj_skippable<P>;
+
+template <typename P>
+concept missing_mute = !parser_obj_concept::parser_obj_muteable<P>;
+
+template <parser_fn F>
+struct lifted final {
+
+  using type = type_of<F>;
+
+  [[no_unique_address]] F fn;
+
+  // clang-format off
+
+  template <typename Self>
+  [[nodiscard]] constexpr auto skip(this Self &&self) 
+      YETI_HOF(std::forward<Self>(self).fn.skip())
+
+  // Subsume above.
+  template <typename Self>
+    requires missing_skip<F>
+  [[nodiscard]] constexpr auto skip(this Self &&self) 
+      // YETI_HOF(dummy{})
+      YETI_HOF(skip_parser<lifted>{YETI_FWD(self)})
+
+  // ===
+
+  template <typename Self>
+  [[nodiscard]] constexpr auto mute(this Self &&self) 
+      YETI_HOF(std::forward<Self>(self).fn.mute())
+
+
+  // Subsume above.
+  template <typename Self>
+    requires missing_mute<F>
+  [[nodiscard]] constexpr auto mute(this Self &&self) 
+      YETI_HOF(dummy{})
+
+  // Behave like the `parse_fn` itself.
+
+  template <typename Self, typename S = type>
+  [[nodiscard]] constexpr auto operator()(this Self &&self, S &&stream)
+      YETI_HOF(std::invoke(YETI_FWD(self).fn, YETI_FWD(stream)))
+
+  // clang-format on
+};
+
+// ===  === //
+// ===  === //
+// ===  === //
+
+/**
+ * @brief This must be publicly inherited and the parent must not shadow `fn`.
+ */
+template <typename F>
+struct skip_mute_base {
+
+  using type = type_of<F>;
+
+  [[no_unique_address]] F fn;
+
+  // clang-format off
+
+  template <typename Self>
+    // requires parser_obj_skippable<F>
+  [[nodiscard]] constexpr auto skip(this Self &&self) 
+      YETI_HOF(std::forward<Self>(self).fn.skip())
+
+  template <typename Self>
+    // requires parser_obj_muteable<F>
+  [[nodiscard]] constexpr auto mute(this Self &&self) 
+      YETI_HOF(std::forward<Self>(self).fn.skip())
+
+  // clang-format on
+};
+
+// ===  === //
+// ===  === //
+// ===  === //
+
 template <typename P, typename S>
-using skip_result = result<std::decay_t<S>, unit, parse_error_t<P, S>>;
+using skip_result = result<decay_t<S>, unit, parse_error_t<P, S>>;
 
-template <specialization_of<lift> P>
-struct skip_parser : P {
+template <typename P>
+// requires parser_fn<P>
+struct skip_parser final : skip_mute_base<P> {
 
-  template <typename Self, typename S = P::type>
+  template <typename Self, typename S = type_of<P>>
   [[nodiscard]] constexpr auto
   operator()(this Self &&self, S &&stream) -> skip_result<P, S> {
 
@@ -64,74 +169,16 @@ struct skip_parser : P {
 
     return {std::move(rest), Exp{std::unexpect, std::move(result).error()}};
   }
-};
-
-template <typename P, typename S>
-using mute_result = result<std::decay_t<S>, parse_value_t<P, S>, unit>;
-
-template <specialization_of<lift> P>
-struct mute_parser : P {
-  template <typename Self, typename S = P::type>
-  [[nodiscard]] constexpr auto
-  operator()(this Self &&self, S &&stream) -> mute_result<P, S> {}
-};
-
-struct dummy {
-  template <typename T>
-  static constexpr auto operator()(T) -> result<T, unit, unit>;
-  static constexpr auto skip() -> dummy;
-  static constexpr auto mute() -> dummy;
-};
-
-// ===  === //
-// ===  === //
-// ===  === //
-
-// Components of the parser_obj concept.
-
-using parser_obj_concept::parser_obj_muteable;
-
-using parser_obj_concept::parser_obj_skippable;
-
-template <parser_fn F>
-struct lift {
-
-  using type = type_of<F>;
-
-  F fn;
-
-  // Fallbacks are the naive implementation.
 
   template <typename Self>
-  [[nodiscard]] constexpr auto skip(this Self &&self) -> skip_parser<lift> {
-    return {YETI_FWD(self)};
+  [[nodiscard]] constexpr auto skip(this Self &&self) -> Self && {
+    return YETI_FWD(self);
   }
-
-  template <typename Self>
-  [[nodiscard]] constexpr auto mute(this Self &&self) -> mute_parser<lift> {
-    return {YETI_FWD(self)};
-  }
-
-  // clang-format off
-
-  template <typename Self>
-    requires parser_obj_skippable<F>
-  [[nodiscard]] constexpr auto skip(this Self &&self) 
-      YETI_HOF(std::forward<Self>(self).fn.skip())
-
-  template <typename Self>
-    requires parser_obj_skippable<F>
-  [[nodiscard]] constexpr auto mute(this Self &&self) 
-      YETI_HOF(std::forward<Self>(self).fn.skip())
-
-  template <typename Self, typename S = type>
-  [[nodiscard]] constexpr auto operator()(this Self &&self, S &&stream)
-      YETI_HOF(std::invoke(YETI_FWD(self).fn, YETI_FWD(stream)))
-
-  // clang-format on
 };
 
-#undef FWD
+// ===  === //
+// ===  === //
+// ===  === //
 
 } // namespace impl::parser_lift
 

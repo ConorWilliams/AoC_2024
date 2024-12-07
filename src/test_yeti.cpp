@@ -4,6 +4,7 @@
 #include <expected>
 #include <ranges>
 #include <string_view>
+#include <type_traits>
 #include <utility>
 
 #include "yeti/core/generics.hpp"
@@ -11,6 +12,14 @@
 #include "yeti/core/parser_fn.hpp"
 
 #include "yeti/core/parser_lift.hpp"
+
+struct empty {};
+
+struct empty_empty {
+  [[no_unique_address]] empty k{};
+};
+
+static_assert(std::is_empty_v<empty_empty>);
 
 namespace {
 
@@ -34,19 +43,23 @@ inline constexpr auto x =
   return {sv, std::unexpected(1)};
 };
 
-static_assert(parser_fn<decltype(x)>);
+using X = decltype(x);
 
-// constexpr auto p = lift(x).skip();
+static_assert(parser_fn<X>);
 
+impl::parser_lift::lifted<X> pp{};
+
+// static_assert(std::destructible<>);
+
+constexpr auto p = lift(x).skip();
 constexpr std::string_view sv{"hello"};
-
 static_assert(
     specialization_of<rebind<decltype(x), std::string_view, unit>, result>);
-
-// static_assert(parser_fn<decltype(p), std::string_view const &>);
+static_assert(parser_fn<decltype(p), std::string_view const &>);
 
 // static_assert(
-//     std::same_as<int, parse_error_t<decltype(p), std::string_view const &>>);
+//     std::same_as<int, parse_error_t<decltype(p), std::string_view const
+//     &>>);
 
 // constexpr auto y = p(sv);
 
