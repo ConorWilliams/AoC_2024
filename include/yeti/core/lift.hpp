@@ -3,7 +3,6 @@
 
 #include <expected>
 #include <functional>
-#include <type_traits>
 #include <utility>
 
 #include "yeti/core/generics.hpp"

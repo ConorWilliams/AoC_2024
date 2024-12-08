@@ -62,7 +62,14 @@ struct result {
  */
 template <typename S, std::movable T, std::movable E>
   requires std::movable<strip<S>>
-using resulting = result<strip<S>, T, E>;
+using resulting_t = result<strip<S>, T, E>;
+
+/**
+ * @brief An alias for `result<...>::expected_type` that strips `S`.
+ */
+template <typename S, std::movable T, std::movable E>
+  requires std::movable<strip<S>>
+using expecting_t = resulting_t<S, T, E>::expected_type;
 
 // ===  === //
 // ===  === //

@@ -10,20 +10,30 @@
 #include "yeti/core.hpp"
 #include "yeti/generic/trivial.hpp"
 
-struct empty {};
-
 using namespace yeti;
 
-using XXX = yeti::impl::parser_lift::skip_parser<
-    yeti::impl::parser_lift::lifted<yeti::impl::fail_impl::fail>>;
+struct not_parser {
+  static constexpr auto skip() -> not_parser;
+  static constexpr auto mute() -> not_parser;
 
-static_assert(parser<XXX>);
+  template <typename T>
+  static constexpr auto operator()(T) -> result<T, int, int>;
+};
+
+static_assert(!parser<not_parser, int, int, int>);
+
+struct empty {};
 
 static_assert(std::copy_constructible<int const>);
 
 constexpr auto k = fail.drop();
 
 static_assert(unit{} == unit{});
+
+// import string view literal
+using namespace std::literals;
+
+static_assert(!eos("hhh"sv));
 
 // constexpr int i = k;
 
