@@ -100,8 +100,18 @@ __trivial:__
 
 __ranges__ requires that the input stream can be constructed from a pair of iterators:
 
+- `satisfy` true if the condition is met.
+
+The condition must
+    Return something convertible to bool, optionally an error:
+    f(token) -> expected<unit, err>
+
+Made from satisfy:
+
 - `any` parser that matches one token of any input and returns it.
 - `lit` match a single literal token of input and returns it.
+- `one_of` match any token in the other range
+
 - `seq` match a range of tokens and return them.
 
 ### Over strings

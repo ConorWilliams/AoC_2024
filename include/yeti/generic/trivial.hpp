@@ -33,22 +33,6 @@ struct [[deprecated]] todo {
 
 // ===  === //
 // ===  === //
-// ===  === /
-
-/**
- * @brief A unit type that signals a value/error that cannot be produced.
- */
-struct never : impl::mixin_equal {
-
-  never() = delete ("This type should never be constructed.");
-
-  [[noreturn]] static constexpr auto what() noexcept -> std::string_view {
-    std::unreachable();
-  }
-};
-
-// ===  === //
-// ===  === //
 // ===  === //
 
 namespace impl::fail_impl {
@@ -70,7 +54,7 @@ struct fail {
   template <storable S>
   static constexpr auto operator()(S &&stream) 
   noexcept(nothrow_storable<S>) -> resulting_t<S, T, E> {
-    return {YETI_FWD(stream), expecting_t<S, T, E>{std::unexpect, E{}}};
+    return {YETI_FWD(stream), std::expected<T, E>{std::unexpect, E{}}};
   }
 
   // clang-format on
@@ -144,7 +128,7 @@ struct eos {
 
     return {
         YETI_FWD(stream),
-        expecting_t<S, unit, err>{std::unexpect, err{}},
+        std::expected<unit, err>{std::unexpect, err{}},
     };
   }
 };

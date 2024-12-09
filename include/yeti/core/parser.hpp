@@ -1,27 +1,12 @@
 #ifndef B87A46A7_5DC3_479A_823A_01D3F94B70B4
 #define B87A46A7_5DC3_479A_823A_01D3F94B70B4
 
+#include "yeti/core/blessed.hpp"
 #include "yeti/core/generics.hpp"
 #include "yeti/core/parser_fn.hpp"
 #include "yeti/core/parser_obj.hpp"
 
 namespace yeti {
-
-namespace impl {
-
-struct mixin_equal {
-  friend constexpr auto
-  operator==(mixin_equal const &, mixin_equal const &) -> bool = default;
-};
-
-} // namespace impl
-
-/**
- * @brief In yeti THE unit type is the regular-void for both values and errors.
- */
-struct unit : impl::mixin_equal {
-  static constexpr auto what() noexcept -> std::string_view { return {}; }
-};
 
 /**
  * @brief The recursive extension of `parser_obj`.
@@ -97,6 +82,9 @@ template <typename P, typename S, typename T, typename E>
   requires parser_obj<P, S, T, E>
 struct parser_impl<P, S, T, E>
     : std::conjunction<mute_recur<P, S, T>, skip_recur<P, S, E>> {};
+
+// TODO: Rewrite as a function template specialization for speed (or vaiable
+// template): https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2024/p2830r3.html#full-code-listing-as-tested-and-implemented
 
 /**
  * @brief The full canonical definition of a parser.

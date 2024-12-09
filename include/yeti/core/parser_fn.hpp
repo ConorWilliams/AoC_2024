@@ -3,77 +3,13 @@
 
 #include <concepts>
 #include <expected>
-#include <string>
-#include <string_view>
 #include <type_traits>
 
 #include "yeti/core/generics.hpp"
+#include "yeti/core/result.hpp"
 #include "yeti/core/typed.hpp"
 
 namespace yeti {
-
-/**
- * @brief A yeti error is produced on-demand via the `what` method.
- */
-template <typename E>
-concept error = std::movable<E> && requires (E e) {
-  { e.what() } -> either<std::string, std::string_view>;
-};
-
-/**
- * @brief The result of invoking a yeti parser.
- *
- * A parser can succeed or fail, regardless it returns the unconsumed input.
- *
- * TIP: Try destructuring the result type to get the value and the rest.
- *
- * @tparam T The type of the result of the parse.
- * @tparam E The type of the error of the parse.
- * @tparam S The type of stream that the parser consumes.
- */
-template <std::movable S, std::movable T, std::movable E>
-struct result {
-
-  using value_type = T;
-  using error_type = E;
-
-  using unparsed_type = S;
-  using expected_type = std::expected<T, E>;
-
-  [[no_unique_address]] unparsed_type unparsed; ///< Unconsumed input.
-  [[no_unique_address]] expected_type expected; ///< The result of the parse.
-
-  /**
-   * @brief Compare two results for equality.
-   */
-  friend constexpr auto
-  operator==(result const &, result const &) -> bool = default;
-
-  /**
-   * @brief Test if the parse was successful.
-   */
-  constexpr explicit operator bool() const noexcept {
-    return expected.has_value();
-  }
-};
-
-/**
- * @brief An alias for `result` that strips `S`.
- */
-template <typename S, std::movable T, std::movable E>
-  requires std::movable<strip<S>>
-using resulting_t = result<strip<S>, T, E>;
-
-/**
- * @brief An alias for `result<...>::expected_type` that strips `S`.
- */
-template <typename S, std::movable T, std::movable E>
-  requires std::movable<strip<S>>
-using expecting_t = resulting_t<S, T, E>::expected_type;
-
-// ===  === //
-// ===  === //
-// ===  === //
 
 /**
  * @brief Implementation of the parser_fn concept.

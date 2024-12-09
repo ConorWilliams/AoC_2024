@@ -2,13 +2,18 @@
 
 #include <concepts>
 #include <expected>
+#include <iostream>
 #include <ranges>
 #include <string_view>
 #include <type_traits>
 #include <utility>
+#include <variant>
 
 #include "yeti/core.hpp"
+// #include "yeti/generic/range.hpp"
 #include "yeti/generic/trivial.hpp"
+
+[[nodiscard]] void test_no() {}
 
 using namespace yeti;
 
@@ -56,12 +61,12 @@ using sub = decltype(std::ranges::subrange(std::declval<T>()));
 
 struct pure {
   static constexpr auto
-  operator()(std::string_view sv) -> result<std::string_view, char, int> {
+  operator()(std::string_view sv) -> result<std::string_view, char, unit> {
     if (sv.starts_with("h")) {
       return {sv.substr(1), 'h'};
     }
 
-    return {sv, std::unexpected(1)};
+    return {sv, std::unexpected(unit{})};
   }
 };
 
@@ -90,7 +95,7 @@ using T = std::invoke_result_t<const yeti::impl::parser_lift::skip_parser<
                                    yeti::impl::parser_lift::lifted<X>>,
                                const std::basic_string_view<char> &>;
 
-static_assert(std::same_as<T, result<std::string_view, unit, int>>);
+static_assert(std::same_as<T, result<std::string_view, unit, unit>>);
 
 static_assert(parser_fn<decltype(p), std::string_view const &>);
 constexpr auto y = p(sv);
@@ -98,12 +103,12 @@ static_assert(y.expected.value() == unit{});
 
 struct half { //
   static auto
-  operator()(std::string_view sv) -> result<std::string_view, char, int> {
+  operator()(std::string_view sv) -> result<std::string_view, char, unit> {
     if (sv.starts_with("h")) {
       return {sv.substr(1), 'h'};
     }
 
-    return {sv, std::unexpected(1)};
+    return {sv, std::unexpected(unit{})};
   }
 
   constexpr auto skip() -> todo { return {}; }
@@ -167,7 +172,7 @@ struct typed_2 {
   //
   using type = int;
 
-  static auto operator()(int) -> result<int, int, int>;
+  static auto operator()(int) -> result<int, int, unit>;
 };
 
 static_assert(parser_fn<typed_2, void>);
@@ -183,25 +188,25 @@ using G = decltype([](std::string_view) -> R {
   std::unreachable();
 });
 
-static_assert(parser_fn<G<result<SV, int, int>>>);
-static_assert(parser_fn<G<result<SV, int, int>>, SV>);
-static_assert(parser_fn<G<result<SV, int, int>>, SV, int>);
-static_assert(parser_fn<G<result<SV, int, int>>, SV, void, int>);
-static_assert(parser_fn<G<result<SV, int, int>>, SV, int, int>);
+static_assert(parser_fn<G<result<SV, int, unit>>>);
+static_assert(parser_fn<G<result<SV, int, unit>>, SV>);
+static_assert(parser_fn<G<result<SV, int, unit>>, SV, int>);
+static_assert(parser_fn<G<result<SV, int, unit>>, SV, void, unit>);
+static_assert(parser_fn<G<result<SV, int, unit>>, SV, int, unit>);
 
-static_assert(!parser_fn<G<result<int, int, int>>, SV>);
-static_assert(!parser_fn<G<result<SV, int, int>>, int>);
+static_assert(!parser_fn<G<result<int, int, unit>>, SV>);
+static_assert(!parser_fn<G<result<SV, int, unit>>, int>);
 static_assert(!parser_fn<G<int>, SV>);
 
-static_assert(!parser_fn<G<result<SV, int, int>>, SV, long>);
-static_assert(!parser_fn<G<result<SV, int, int>>, SV, void, long>);
+static_assert(!parser_fn<G<result<SV, int, unit>>, SV, long>);
+static_assert(!parser_fn<G<result<SV, int, unit>>, SV, void, long>);
 
-static_assert(parser_fn<G<result<SV, int, int>> &, SV>);
+static_assert(parser_fn<G<result<SV, int, unit>> &, SV>);
 
 // 4. Invocation must be valid for all value categories (VC).
 
 struct mut_only {
-  auto operator()(int) -> result<int, int, int>;
+  auto operator()(int) -> result<int, int, unit>;
 };
 
 static_assert(!parser_fn<mut_only, int>);
@@ -209,15 +214,15 @@ static_assert(!parser_fn<mut_only, int>);
 // 5. Invocations in (3) must return the same type independent of the VC.
 
 struct overloaded_ok {
-  auto operator()(int) const -> result<int, int, int>;
-  auto operator()(int) && -> result<int, int, int>;
+  auto operator()(int) const -> result<int, int, unit>;
+  auto operator()(int) && -> result<int, int, unit>;
 };
 
 static_assert(parser_fn<overloaded_ok, int>);
 
 struct overloaded_bad {
-  auto operator()(int) const -> result<int, int, int>;
-  auto operator()(int) && -> result<int, long, int>;
+  auto operator()(int) const -> result<int, int, unit>;
+  auto operator()(int) && -> result<int, long, unit>;
 };
 
 static_assert(!parser_fn<overloaded_bad, int>);
@@ -236,7 +241,9 @@ static_assert(parser<H>);
 
 static_assert(parser<H, int>);
 
-struct never {};
+struct never {
+  static auto what() -> std::string_view { return "never"; }
+};
 
 template <typename E>
 struct noop {
@@ -253,4 +260,54 @@ static_assert(parser<noop<never>>);
 
 } // namespace
 
-int main() { return 0; }
+struct TypeTeller {
+  auto speak(this auto &&self) -> int {
+    using SelfType = decltype(self);
+    using UnrefSelfType = std::remove_reference_t<SelfType>;
+    if constexpr (std::is_lvalue_reference_v<SelfType>) {
+      if constexpr (std::is_const_v<UnrefSelfType>)
+        std::cout << "const lvalue\n";
+      else
+        std::cout << "mutable lvalue\n";
+    } else {
+      if constexpr (std::is_const_v<UnrefSelfType>)
+        std::cout << "const rvalue\n";
+      else
+        std::cout << "mutable rvalue\n";
+    }
+
+    return 0;
+  }
+};
+
+struct noisy {
+  noisy() { std::cout << "construct\n"; }
+  noisy(noisy &&) { std::cout << "move\n"; }
+  noisy(noisy const &) { std::cout << "copy\n"; }
+  ~noisy() { std::cout << "destruct\n"; }
+};
+
+auto tell() {
+
+  TypeTeller tell{};
+
+  return std::move(tell).speak();
+}
+
+struct innet {
+  noisy in;
+};
+
+auto cons() -> innet {
+  noisy n{};
+  return {{std::move(n)}};
+}
+
+int main() {
+
+  tell();
+
+  cons();
+
+  return 0;
+}
