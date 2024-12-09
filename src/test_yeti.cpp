@@ -22,10 +22,10 @@ struct not_parser {
   static constexpr auto mute() -> not_parser;
 
   template <typename T>
-  static constexpr auto operator()(T) -> result<T, int, int>;
+  static constexpr auto operator()(T) -> result<T, int, never>;
 };
 
-static_assert(!parser<not_parser, int, int, int>);
+static_assert(!parser<not_parser, int, int, never>);
 
 struct empty {};
 

@@ -28,7 +28,7 @@ struct [[deprecated]] todo {
   static constexpr auto mute() -> todo;
 
   template <typename T>
-  static constexpr auto operator()(T) -> result<T, unit, unit>;
+  static constexpr auto operator()(T) -> result<T, never, never>;
 };
 
 // ===  === //
@@ -43,18 +43,18 @@ struct err {
   }
 };
 
-template <either<never, unit> T = never, either<err, unit> E = err>
+template <either<err, unit> E = err>
 struct fail {
 
-  static constexpr auto skip() noexcept -> fail<unit, E> { return {}; }
-  static constexpr auto mute() noexcept -> fail<T, unit> { return {}; }
+  static constexpr auto skip() noexcept -> fail<E> { return {}; }
+  static constexpr auto mute() noexcept -> fail<unit> { return {}; }
 
   // clang-format off
 
   template <storable S>
   static constexpr auto operator()(S &&stream) 
-  noexcept(nothrow_storable<S>) -> resulting_t<S, T, E> {
-    return {YETI_FWD(stream), std::expected<T, E>{std::unexpect, E{}}};
+  noexcept(nothrow_storable<S>) -> resulting_t<S, never, E> {
+    return {YETI_FWD(stream), std::expected<never, E>{std::unexpect, E{}}};
   }
 
   // clang-format on
@@ -75,31 +75,28 @@ inline constexpr auto fail = combinate(impl::fail_impl::fail<>{});
 
 namespace impl::pure_impl {
 
-template <typename E>
 struct pure {
 
   static constexpr auto skip() noexcept -> pure { return {}; }
-  static constexpr auto mute() noexcept -> pure<unit> { return {}; }
+  static constexpr auto mute() noexcept -> pure { return {}; }
 
   // clang-format off
 
   template <storable S>
   static constexpr auto operator()(S &&stream)
-  noexcept(nothrow_storable<S>) -> resulting_t<S, unit, E> {
+  noexcept(nothrow_storable<S>) -> resulting_t<S, unit, never> {
     return {YETI_FWD(stream), {}};
   }
 
   // clang-format on
 };
 
-static_assert(parser<pure<never>>);
-
 } // namespace impl::pure_impl
 
 /**
  * @brief The pure parser always succeeds without consuming any input.
  */
-inline constexpr auto pure = combinate(impl::pure_impl::pure<never>{});
+inline constexpr auto pure = combinate(impl::pure_impl::pure{});
 
 // ===  === //
 // ===  === //
