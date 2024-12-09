@@ -92,17 +92,17 @@ concept canonical_parser = parser_impl<P, S, T, E>::value;
 // ===  === //
 
 template <typename P, typename S = void, typename E = void>
-concept core_parser_skip_help =
+concept core_parser_skip =
     parser_obj<remove_rvalue_t<P>, S, unit_unless_void<S, type_of<P>>, E>;
 
 template <typename P, typename S = void, typename T = void>
-concept core_parser_mute_help =
+concept core_parser_mute =
     parser_obj<remove_rvalue_t<P>, S, T, unit_unless_void<S, type_of<P>>>;
 
 template <typename P, typename S = void, typename T = void, typename E = void>
 concept parser_help =
-    core_parser_skip_help<skip_result_t<P>, else_static<S, P>, E> &&
-    core_parser_mute_help<mute_result_t<P>, else_static<S, P>, T> &&
+    core_parser_skip<skip_result_t<P>, else_static<S, P>, E> &&
+    core_parser_mute<mute_result_t<P>, else_static<S, P>, T> &&
     canonical_parser<P, S, T, E>;
 
 /**
