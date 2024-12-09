@@ -90,10 +90,10 @@ struct parse_result<P, void> {
 } // namespace detail
 
 template <typename P, typename S = void>
-using parse_value_t = detail::parse_result<P, S>::value_type;
+using raw_value_t = detail::parse_result<P, S>::value_type;
 
 template <typename P, typename S = void>
-using parse_error_t = detail::parse_result<P, S>::error_type;
+using raw_error_t = detail::parse_result<P, S>::error_type;
 
 /**
  * @brief Verify that `P(S)` returns a `result<_, T, _>`.
@@ -103,7 +103,7 @@ using parse_error_t = detail::parse_result<P, S>::error_type;
  * For better error messages this is a named concept
  */
 template <typename P, typename S, typename T = void>
-concept value_matches_request = either<T, void, parse_value_t<P, S>>;
+concept value_matches_request = either<T, void, raw_value_t<P, S>>;
 
 /**
  * @brief Verify that `P(S)` returns a `result<_, _, E>`.
@@ -113,7 +113,7 @@ concept value_matches_request = either<T, void, parse_value_t<P, S>>;
  * For better error messages this is a named concept
  */
 template <typename P, typename S, typename E = void>
-concept error_matches_request = either<E, void, parse_error_t<P, S>>;
+concept error_matches_request = either<E, void, raw_error_t<P, S>>;
 
 /**
  * @brief Check that `P(S) -> result<S, T, E>`.
@@ -177,7 +177,8 @@ using impl::parser_fn_concept::parser_fn;
  */
 template <typename P, typename S = void>
   requires parser_fn<P, S>
-using parse_value_t = impl::parser_fn_concept::parse_value_t<P, S>;
+using parse_value_t =
+    impl::parser_fn_concept::raw_value_t<P, impl::else_static<S, P>>;
 
 /**
  * @brief Fetch the error type of a parser.
@@ -186,7 +187,8 @@ using parse_value_t = impl::parser_fn_concept::parse_value_t<P, S>;
  */
 template <typename P, typename S = void>
   requires parser_fn<P, S>
-using parse_error_t = impl::parser_fn_concept::parse_error_t<P, S>;
+using parse_error_t =
+    impl::parser_fn_concept::raw_error_t<P, impl::else_static<S, P>>;
 
 } // namespace yeti
 

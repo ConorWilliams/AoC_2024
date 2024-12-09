@@ -31,6 +31,16 @@ using type_of = impl::type_impl<strip<T>>::type;
 template <typename T>
 concept typed = different_from<type_of<T>, void>;
 
+namespace impl {
+
+/**
+ * @brief If `S` is void then use the static type of `P`.
+ */
+template <typename S, typename P>
+using else_static = std::conditional_t<std::is_void_v<S>, type_of<P>, S>;
+
+} // namespace impl
+
 } // namespace yeti
 
 #endif /* E0903E10_DE5D_4348_8AFF_659AF849A3A2 */

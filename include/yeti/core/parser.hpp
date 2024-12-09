@@ -18,12 +18,6 @@ namespace yeti {
  */
 namespace impl::parser_concept {
 
-/**
- * @brief If `S` is void then use the static type of `P`.
- */
-template <typename S, typename P>
-using else_static = std::conditional_t<std::is_void_v<S>, type_of<P>, S>;
-
 template <typename P>
 concept self_skip = same_as_stripped<P, skip_result_t<P>>;
 
@@ -83,9 +77,6 @@ template <typename P, typename S, typename T, typename E>
 struct parser_impl<P, S, T, E>
     : std::conjunction<mute_recur<P, S, T>, skip_recur<P, S, E>> {};
 
-// TODO: Rewrite as a function template specialization for speed (or vaiable
-// template): https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2024/p2830r3.html#full-code-listing-as-tested-and-implemented
-
 /**
  * @brief The full canonical definition of a parser.
  *
@@ -108,6 +99,12 @@ template <typename P, typename S = void, typename T = void>
 concept core_parser_mute_help =
     parser_obj<remove_rvalue_t<P>, S, T, unit_unless_void<S, type_of<P>>>;
 
+template <typename P, typename S = void, typename T = void, typename E = void>
+concept parser_help =
+    core_parser_skip_help<skip_result_t<P>, else_static<S, P>, E> &&
+    core_parser_mute_help<mute_result_t<P>, else_static<S, P>, T> &&
+    canonical_parser<P, S, T, E>;
+
 /**
  * @brief Yeti's defining concept, the parser.
  *
@@ -117,11 +114,8 @@ concept core_parser_mute_help =
  * @tparam E The error type which the parser produces.
  */
 template <typename P, typename S = void, typename T = void, typename E = void>
-concept parser =
-    parser_obj<P, S, T, E>                                           //
-    && core_parser_skip_help<skip_result_t<P>, else_static<S, P>, E> //
-    && core_parser_mute_help<mute_result_t<P>, else_static<S, P>, T> //
-    && canonical_parser<P, S, T, E>;                                 //
+concept parser = parser_obj<P, S, T, E> &&                                    //
+                 parser_help<P, S, parse_value_t<P, S>, parse_error_t<P, S>>; //
 
 } // namespace impl::parser_concept
 
