@@ -177,6 +177,9 @@ struct typed_2 {
 
 static_assert(parser_fn<typed_2, void>);
 static_assert(parser_fn<typed_2, int>);
+
+static_assert(parser_fn<typed_2, void, int>);
+
 static_assert(!parser_fn<typed_2, double>);
 
 // 3. Can be invoked with an `R` to produce a `result<R, T, E>`.
@@ -192,6 +195,7 @@ static_assert(parser_fn<G<result<SV, int, unit>>>);
 static_assert(parser_fn<G<result<SV, int, unit>>, SV>);
 static_assert(parser_fn<G<result<SV, int, unit>>, SV, int>);
 static_assert(parser_fn<G<result<SV, int, unit>>, SV, void, unit>);
+static_assert(!parser_fn<G<result<SV, int, unit>>, void, void, unit>);
 static_assert(parser_fn<G<result<SV, int, unit>>, SV, int, unit>);
 
 static_assert(!parser_fn<G<result<int, int, unit>>, SV>);

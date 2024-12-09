@@ -147,12 +147,15 @@ concept same_invoke_result =
  *    (void, S2)    => untyped_parser_fn<P, S2, T, E>
  *    (S1, void)    => untyped_parser_fn<P, S1, T, E>
  *    (S1, S2)       => UPF<P, S1, T, E> && UPF<P, S2, T, E> && same-result
+ *
+ * TIP: You can read: `!A || B` as `A => B` aka `A` implies `B`.
  */
 template <typename P, typename S1, typename S2, typename T, typename E>
-concept parser_fn_help =
-    (pure_void<S1> || untyped_parser_fn<P, S1, T, E>) &&
-    (pure_void<S2> || untyped_parser_fn<P, S2, T, E>) &&
-    (either<void, S1, S2> || same_invoke_result<P, S1, S2>);
+concept parser_fn_help =                                    //
+    (!pure_void<S1, S2> || pure_void<T, E>)                 //
+    &&(!not_void<S1> || untyped_parser_fn<P, S1, T, E>)     //
+    &&(!not_void<S2> || untyped_parser_fn<P, S2, T, E>)     //
+    &&(!not_void<S1, S2> || same_invoke_result<P, S1, S2>); //
 
 /**
  * @brief The lowest level of the parser concept.

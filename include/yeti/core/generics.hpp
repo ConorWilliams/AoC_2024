@@ -41,11 +41,11 @@ concept either = (std::same_as<T, Args> || ...);
 template <typename T, typename U>
 concept different_from = !std::same_as<T, U>;
 
-template <typename T>
-concept pure_void = std::same_as<void, T>;
+template <typename... Ts>
+concept pure_void = (std::same_as<void, Ts> && ...);
 
-template <typename T>
-concept not_void = different_from<void, T>;
+template <typename... T>
+concept not_void = (different_from<void, T> && ...);
 
 template <typename T>
 using strip = std::remove_cvref_t<T>;
