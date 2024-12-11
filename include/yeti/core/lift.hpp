@@ -3,6 +3,7 @@
 
 #include <expected>
 #include <functional>
+#include <type_traits>
 #include <utility>
 
 #include "yeti/core/generics.hpp"
@@ -17,75 +18,10 @@
 
 namespace yeti {
 
-template<bool Rep, typename T>
-using replace_if  = std::conditional_t<Rep, std::conditional_t<std::same_as<T, never>, never, T>, void> 
-
-// use explicit specializations of this and a common base class that has mute/skip
-
-template<typename P, bool Skip, bool Mute>
-struct lifted {
-
-
-  static_assert(std::same_as<F, strip<F>>);
-
-  using type = type_of<F>;
-
-  [[no_unique_address]] F fn;
-
-  template<typename S>
-  using val_t = replace_if<Skip, parse_value_t<P, S>>
-
-  template<typename S>
-  using err_t = replace_if<Mute, parse_error_t<P, S>>
-
-
-  template <typename Self, typename S = type_of<P>>
-    requires parser_fn<P, S> && std::same_as<val_t<S>, unit> 
-  [[nodiscard]] constexpr auto
-  operator()(this Self &&self, S &&stream) -> rebind<P, S, unit, err_t<S>> {
-
-    auto [rest, result] = std::invoke(YETI_FWD(self).fn, YETI_FWD(stream));
-
-    if (result) {
-      return {std::move(rest), {}};
-    }
-
-    using Exp = rebind<P, S, unit, void>::expected_type;
-
-    return {std::move(rest), Exp{std::unexpect, std::move(result).error()}};
-  }
-
-
-};
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 namespace impl::parser_lift {
-
-template <parser_fn F>
+template <typename F, bool Skip = false, bool Mute = false>
 struct lifted;
-
-} // namespace impl::parser_lift
+}
 
 /**
  * @brief Short-circuit for parsers.
@@ -112,20 +48,8 @@ lift(P &&parser) noexcept(nothrow_storable<P>) -> parser_like<P> auto {
 
 namespace impl::parser_lift {
 
-template <typename>
-struct mute_parser;
-
-template <typename>
-struct skip_parser;
-
-template <typename P>
-concept missing_skip = !parser_obj_concept::parser_obj_skippable<P>;
-
-template <typename P>
-concept missing_mute = !parser_obj_concept::parser_obj_muteable<P>;
-
-template <parser_fn F>
-struct lifted final {
+template <typename F, bool Skip, bool Mute>
+struct lifted_base {
 
   static_assert(std::same_as<F, strip<F>>);
 
@@ -134,73 +58,41 @@ struct lifted final {
   [[no_unique_address]] F fn;
 
   [[nodiscard]] constexpr auto skip(this auto &&self)
-      YETI_HOF(YETI_FWD(self).fn.skip())
+      YETI_HOF(lifted<F, true, Mute>{YETI_FWD(self).fn})
 
-  // Subsume above.
   template <typename Self>
-    requires missing_skip<F>
-  [[nodiscard]] constexpr auto skip(this Self &&self)
-      YETI_HOF(lifted<skip_parser<F>>{YETI_FWD(self).fn})
-
-  // ===
+    requires Skip
+  [[nodiscard]] constexpr auto skip(this Self &&self) -> Self && {
+    return YETI_FWD(self);
+  }
 
   [[nodiscard]] constexpr auto mute(this auto &&self)
-      YETI_HOF(YETI_FWD(self).fn.mute())
+      YETI_HOF(lifted<F, Skip, true>{YETI_FWD(self).fn})
 
-  // Subsume above.
   template <typename Self>
-    requires missing_mute<F>
-  [[nodiscard]] constexpr auto mute(this Self &&self)
-      YETI_HOF(lifted<mute_parser<F>>{YETI_FWD(self).fn})
+    requires Mute
+  [[nodiscard]] constexpr auto mute(this Self &&self) -> Self && {
+    return YETI_FWD(self);
+  }
+};
 
-  // Behave like the `parse_fn` itself.
-  template <typename S = type>
+/**
+ * @brief Act exactly like the input `parse_fn`.
+ */
+template <typename F>
+struct lifted<F, false, false> : lifted_base<F, false, false> {
+  template <typename S = type_of<F>>
   [[nodiscard]] constexpr auto operator()(this auto &&self, S &&stream)
       YETI_HOF(std::invoke(YETI_FWD(self).fn, YETI_FWD(stream)))
 };
 
-// ===  === //
-// ===  === //
-// ===  === //
-
-/**
- * @brief This must be publicly inherited and the parent must not shadow `fn`.
- */
 template <typename F>
-struct skip_mute_base {
+struct lifted<F, true, false> : lifted_base<F, true, false> {
 
-  static_assert(std::same_as<F, strip<F>>);
-
-  using type = type_of<F>;
-
-  [[no_unique_address]] F fn;
-
-  // [[nodiscard]] constexpr auto skip(this auto &&self)
-  //     YETI_HOF(YETI_FWD(self).fn.skip())
-
-  // [[nodiscard]] constexpr auto mute(this auto &&self)
-  //     YETI_HOF(YETI_FWD(self).fn.mute())
-};
-
-// ===  === //
-// ===  === //
-// ===  === //
-
-// TODO: Add_mute and add_skip as separate independant wrapper functions.
-// then call lift = add_mute(add_skip(parser))
-
-template <typename P>
-struct skip_parser final : skip_mute_base<P> {
-
-  // template <typename Self, typename S = type_of<P>>
-  //   requires parser_fn<P, S> && parser_fn<P, S, never, void>
-  // [[nodiscard]] constexpr auto operator()(this Self &&self, S &&stream)
-  //     YETI_HOF(std::invoke(YETI_FWD(self).fn, YETI_FWD(stream)))
-
-  template <typename Self, typename S = type_of<P>>
-    requires parser_fn<P, S>
+  template <typename Self, typename S = type_of<F>>
+    requires parser_fn<F, S>
   [[nodiscard]] constexpr auto
-  operator()(this Self &&self, S &&stream) -> rebind<P, S, unit, void> {
+  operator()(this Self &&self, S &&stream) -> rebind<F, S, unit, void> {
 
     auto [rest, result] = std::invoke(YETI_FWD(self).fn, YETI_FWD(stream));
 
@@ -208,32 +100,24 @@ struct skip_parser final : skip_mute_base<P> {
       return {std::move(rest), {}};
     }
 
-    using Exp = rebind<P, S, unit, void>::expected_type;
+    using Exp = rebind<F, S, unit, void>::expected_type;
 
     return {std::move(rest), Exp{std::unexpect, std::move(result).error()}};
   }
 
-  template <typename Self>
-  [[nodiscard]] constexpr auto skip(this Self &&self) -> Self && {
-    return YETI_FWD(self);
-  }
-
-  // template <typename Self>
-  // [[nodiscard]] constexpr auto mute(this Self &&self)
-  //     YETI_HOF(lift(YETI_FWD(self)).mute())
+  template <typename Self, typename S = type_of<F>>
+    requires parser_fn<F, S> && std::same_as<parse_value_t<F, S>, never>
+  [[nodiscard]] constexpr auto operator()(this Self &&self, S &&stream)
+      YETI_HOF(std::invoke(YETI_FWD(self).fn, YETI_FWD(stream)))
 };
 
-// ===  === //
-// ===  === //
-// ===  === //
+template <typename F>
+struct lifted<F, false, true> : lifted_base<F, false, true> {
 
-template <typename P>
-struct mute_parser final : skip_mute_base<P> {
-
-  template <typename Self, typename S = type_of<P>>
-    requires parser_fn<P, S>
+  template <typename Self, typename S = type_of<F>>
+    requires parser_fn<F, S>
   [[nodiscard]] constexpr auto
-  operator()(this Self &&self, S &&stream) -> rebind<P, S, void, unit> {
+  operator()(this Self &&self, S &&stream) -> rebind<F, S, void, unit> {
 
     auto [rest, result] = std::invoke(YETI_FWD(self).fn, YETI_FWD(stream));
 
@@ -241,14 +125,51 @@ struct mute_parser final : skip_mute_base<P> {
       return {std::move(rest), {std::move(result).value()}};
     }
 
-    using Exp = rebind<P, S, void, unit>::expected_type;
+    using Exp = rebind<F, S, void, unit>::expected_type;
 
     return {std::move(rest), Exp{std::unexpect, unit{}}};
   }
 
-  template <typename Self>
-  [[nodiscard]] constexpr auto mute(this Self &&self) -> Self && {
-    return YETI_FWD(self);
+  template <typename Self, typename S = type_of<F>>
+    requires parser_fn<F, S> && std::same_as<parse_error_t<F, S>, never>
+  [[nodiscard]] constexpr auto operator()(this Self &&self, S &&stream)
+      YETI_HOF(std::invoke(YETI_FWD(self).fn, YETI_FWD(stream)))
+};
+
+template <typename T>
+using never_or_unit = std::conditional_t<std::same_as<T, never>, never, unit>;
+
+template <typename F>
+struct lifted<F, true, true> : lifted_base<F, true, true> {
+
+  template <typename S>
+  using val_t = never_or_unit<parse_value_t<F, S>>;
+
+  template <typename S>
+  using err_t = never_or_unit<parse_error_t<F, S>>;
+
+  template <typename Self, typename S = type_of<F>>
+    requires parser_fn<F, S>
+  [[nodiscard]] constexpr auto
+  operator()(this Self &&self, S &&stream) -> rebind<F, S, val_t<S>, err_t<S>> {
+
+    auto [rest, result] = std::invoke(YETI_FWD(self).fn, YETI_FWD(stream));
+
+    if (result) {
+      if constexpr (std::same_as<val_t<S>, never>) {
+        return {std::move(rest), std::move(result).value()};
+      } else {
+        return {std::move(rest), {}};
+      }
+    }
+
+    using Exp = std::expected<val_t<S>, err_t<S>>;
+
+    if constexpr (std::same_as<err_t<S>, never>) {
+      return {std::move(rest), Exp{std::unexpect, std::move(result).error()}};
+    } else {
+      return {std::move(rest), Exp{std::unexpect, unit{}}};
+    }
   }
 };
 

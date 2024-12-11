@@ -33,12 +33,12 @@ struct errr {
 };
 
 struct to_lift_never1 {
-  static constexpr auto operator()(SV x) -> result<SV, int, errr> {
+  static constexpr auto operator()(SV x) -> result<SV, never, errr> {
     return {x, std::unexpected(errr{})};
   }
 };
 
-constexpr auto l1 = lift(to_lift_never1{}).skip();
+constexpr auto l1 = lift(to_lift_never1{});
 
 static_assert(parser<decltype(l1), SV>);
 
@@ -124,14 +124,6 @@ static_assert(
     specialization_of<rebind<decltype(x), std::string_view, unit>, result>);
 
 static_assert(parser_fn<decltype(pp), std::string_view>);
-
-// rebind<decltype(pp), std::string_view const &>;
-
-using T = std::invoke_result_t<const yeti::impl::parser_lift::skip_parser<
-                                   yeti::impl::parser_lift::lifted<X>>,
-                               const std::basic_string_view<char> &>;
-
-static_assert(std::same_as<T, result<std::string_view, unit, unit>>);
 
 static_assert(parser_fn<decltype(p), std::string_view const &>);
 constexpr auto y = p(sv);
