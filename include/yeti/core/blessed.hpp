@@ -35,14 +35,18 @@ struct never : impl::mixin_equal {
 
   never() = delete ("This type should never be constructed.");
 
+  // Defing this with UB allows aggressive optimizations.
+
+  never(never const &) { std::unreachable(); }
+
+  [[noreturn]] auto operator=(never const &) -> never & { std::unreachable(); }
+
   [[noreturn]] static constexpr auto what() noexcept -> std::string_view {
     std::unreachable();
   }
-};
 
-// TODO: Add never handling as s special case to parser definition, i.e. alow
-// skip to be a parser that returns ever
-// TODO: Remove templating from the noop and fail once above is done
+  ~never() { std::unreachable(); }
+};
 
 } // namespace yeti
 

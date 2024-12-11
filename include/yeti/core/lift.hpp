@@ -77,7 +77,7 @@ struct lifted final {
   template <typename Self>
     requires missing_skip<F>
   [[nodiscard]] constexpr auto skip(this Self &&self)
-      YETI_HOF(skip_parser<lifted>{YETI_FWD(self)})
+      YETI_HOF(lifted<skip_parser<F>>{YETI_FWD(self).fn})
 
   // ===
 
@@ -88,7 +88,7 @@ struct lifted final {
   template <typename Self>
     requires missing_mute<F>
   [[nodiscard]] constexpr auto mute(this Self &&self)
-      YETI_HOF(mute_parser<lifted>{YETI_FWD(self)})
+      YETI_HOF(lifted<mute_parser<F>>{YETI_FWD(self).fn})
 
   // Behave like the `parse_fn` itself.
   template <typename S = type>
@@ -112,19 +112,27 @@ struct skip_mute_base {
 
   [[no_unique_address]] F fn;
 
-  [[nodiscard]] constexpr auto skip(this auto &&self)
-      YETI_HOF(YETI_FWD(self).fn.skip())
+  // [[nodiscard]] constexpr auto skip(this auto &&self)
+  //     YETI_HOF(YETI_FWD(self).fn.skip())
 
-  [[nodiscard]] constexpr auto mute(this auto &&self)
-      YETI_HOF(YETI_FWD(self).fn.skip())
+  // [[nodiscard]] constexpr auto mute(this auto &&self)
+  //     YETI_HOF(YETI_FWD(self).fn.mute())
 };
 
 // ===  === //
 // ===  === //
 // ===  === //
 
+// TODO: Add_mute and add_skip as separate independant wrapper functions.
+// then call lift = add_mute(add_skip(parser))
+
 template <typename P>
 struct skip_parser final : skip_mute_base<P> {
+
+  // template <typename Self, typename S = type_of<P>>
+  //   requires parser_fn<P, S> && parser_fn<P, S, never, void>
+  // [[nodiscard]] constexpr auto operator()(this Self &&self, S &&stream)
+  //     YETI_HOF(std::invoke(YETI_FWD(self).fn, YETI_FWD(stream)))
 
   template <typename Self, typename S = type_of<P>>
     requires parser_fn<P, S>
@@ -146,6 +154,10 @@ struct skip_parser final : skip_mute_base<P> {
   [[nodiscard]] constexpr auto skip(this Self &&self) -> Self && {
     return YETI_FWD(self);
   }
+
+  // template <typename Self>
+  // [[nodiscard]] constexpr auto mute(this Self &&self)
+  //     YETI_HOF(lift(YETI_FWD(self)).mute())
 };
 
 // ===  === //

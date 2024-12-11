@@ -13,9 +13,46 @@
 // #include "yeti/generic/range.hpp"
 #include "yeti/generic/trivial.hpp"
 
-[[nodiscard]] void test_no() {}
+using SV = std::string_view;
 
+using namespace std::literals;
 using namespace yeti;
+
+// =====
+// =====
+// =====
+// =====
+// =====
+// =====
+// =====
+// =====
+// =====
+
+struct errr {
+  static auto what() -> std::string_view { return "err"; }
+};
+
+struct to_lift_never1 {
+  static constexpr auto operator()(SV x) -> result<SV, int, errr> {
+    return {x, std::unexpected(errr{})};
+  }
+};
+
+constexpr auto l1 = lift(to_lift_never1{}).skip();
+
+static_assert(parser<decltype(l1), SV>);
+
+static_assert(parser_fn<to_lift_never1, SV>);
+
+// =====
+// =====
+// =====
+// =====
+// =====
+// =====
+// =====
+// =====
+// =====
 
 struct not_parser {
   static constexpr auto skip() -> not_parser;
@@ -36,7 +73,6 @@ constexpr auto k = fail.drop();
 static_assert(unit{} == unit{});
 
 // import string view literal
-using namespace std::literals;
 
 static_assert(!eos("hhh"sv));
 
@@ -183,8 +219,6 @@ static_assert(parser_fn<typed_2, void, int>);
 static_assert(!parser_fn<typed_2, double>);
 
 // 3. Can be invoked with an `R` to produce a `result<R, T, E>`.
-
-using SV = std::string_view;
 
 template <class R>
 using G = decltype([](std::string_view) -> R {
