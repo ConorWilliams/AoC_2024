@@ -17,6 +17,69 @@
 
 namespace yeti {
 
+template<bool Rep, typename T>
+using replace_if  = std::conditional_t<Rep, std::conditional_t<std::same_as<T, never>, never, T>, void> 
+
+// use explicit specializations of this and a common base class that has mute/skip
+
+template<typename P, bool Skip, bool Mute>
+struct lifted {
+
+
+  static_assert(std::same_as<F, strip<F>>);
+
+  using type = type_of<F>;
+
+  [[no_unique_address]] F fn;
+
+  template<typename S>
+  using val_t = replace_if<Skip, parse_value_t<P, S>>
+
+  template<typename S>
+  using err_t = replace_if<Mute, parse_error_t<P, S>>
+
+
+  template <typename Self, typename S = type_of<P>>
+    requires parser_fn<P, S> && std::same_as<val_t<S>, unit> 
+  [[nodiscard]] constexpr auto
+  operator()(this Self &&self, S &&stream) -> rebind<P, S, unit, err_t<S>> {
+
+    auto [rest, result] = std::invoke(YETI_FWD(self).fn, YETI_FWD(stream));
+
+    if (result) {
+      return {std::move(rest), {}};
+    }
+
+    using Exp = rebind<P, S, unit, void>::expected_type;
+
+    return {std::move(rest), Exp{std::unexpect, std::move(result).error()}};
+  }
+
+
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 namespace impl::parser_lift {
 
 template <parser_fn F>
