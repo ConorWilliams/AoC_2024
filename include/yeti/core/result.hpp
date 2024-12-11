@@ -55,7 +55,7 @@ struct result {
   /**
    * @brief Test if the parse was successful.
    */
-  constexpr explicit operator bool() const noexcept {
+  [[nodiscard]] constexpr explicit operator bool() const noexcept {
     return expected.has_value();
   }
 };

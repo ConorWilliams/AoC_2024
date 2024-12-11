@@ -23,7 +23,8 @@ struct flat_variant<T> final {
 
   template <typename Self>
     requires error<T>
-  constexpr auto what(this Self &&self) YETI_HOF(YETI_FWD(self).value.what())
+  [[nodiscard]] constexpr auto what(this Self &&self)
+      YETI_HOF(YETI_FWD(self).value.what())
 
   constexpr auto visit(this auto &&self, auto &&visitor)
       YETI_HOF(std::invoke(YETI_FWD(visitor), YETI_FWD(self).value))
@@ -36,15 +37,15 @@ struct flat_variant final {
 
   template <typename Self>
     requires (error<T> && ...)
-  constexpr auto what(this Self &&self)
-      YETI_HOF(YETI_FWD(self).visit([](auto &&val) -> std::string {
+  [[nodiscard]] constexpr auto what(this Self &&self)
+      YETI_HOF(YETI_FWD(self).visit([](auto &&val) static -> std::string {
         return YETI_FWD(val).what();
       }))
 
   template <typename Self>
     requires (error_view<T> && ...)
-  constexpr auto what(this Self &&self)
-      YETI_HOF(YETI_FWD(self).visit([](auto &&val) -> std::string_view {
+  [[nodiscard]] constexpr auto what(this Self &&self)
+      YETI_HOF(YETI_FWD(self).visit([](auto &&val) static -> std::string_view {
         return YETI_FWD(val).what();
       }))
 

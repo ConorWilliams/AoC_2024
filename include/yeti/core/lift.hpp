@@ -36,7 +36,7 @@ template <typename P>
  * @brief Transform a `parse_fn` into a `parser`.
  */
 template <typename P>
-  requires parser_fn<P>
+  requires parser_fn<P> && storable<P>
 [[nodiscard]] constexpr auto
 lift(P &&parser) noexcept(nothrow_storable<P>) -> parser_like<P> auto {
   return impl::parser_lift::lifted<strip<P>>{YETI_FWD(parser)};
