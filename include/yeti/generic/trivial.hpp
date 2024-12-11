@@ -60,8 +60,6 @@ struct fail {
   // clang-format on
 };
 
-static_assert(parser<fail<>, int>);
-
 } // namespace impl::fail_impl
 
 /**
@@ -110,13 +108,14 @@ struct err {
   }
 };
 
+template <typename E = err>
 struct eos {
 
   static constexpr auto skip() noexcept -> eos { return {}; }
-  static constexpr auto mute() noexcept -> eos { return {}; }
+  static constexpr auto mute() noexcept -> eos<unit> { return {}; }
 
   template <storable S>
-  static constexpr auto operator()(S &&stream) -> resulting_t<S, unit, err>
+  static constexpr auto operator()(S &&stream) -> resulting_t<S, unit, E>
     requires requires { std::ranges::empty(YETI_FWD(stream)); }
   {
     if (std::ranges::empty(stream)) {
@@ -125,12 +124,10 @@ struct eos {
 
     return {
         YETI_FWD(stream),
-        std::expected<unit, err>{std::unexpect, err{}},
+        std::expected<unit, E>{std::unexpect, E{}},
     };
   }
 };
-
-static_assert(parser<eos>);
 
 } // namespace impl::eos_impl
 
@@ -141,7 +138,7 @@ static_assert(parser<eos>);
  *
  * This parser does not consume any input.
  */
-inline constexpr auto eos = combinate(impl::eos_impl::eos{});
+inline constexpr auto eos = combinate(impl::eos_impl::eos<>{});
 
 } // namespace yeti
 

@@ -26,6 +26,7 @@ struct combinator final {
    * @brief Apply the parser to the input `stream`.
    */
   template <typename S = type>
+    requires parser<P, S>
   [[nodiscard]] constexpr auto operator()(this auto &&self, S &&stream)
       YETI_HOF(std::invoke(YETI_FWD(self).fn, YETI_FWD(stream)))
 
