@@ -11,12 +11,15 @@
 
 #include "yeti/core.hpp"
 // #include "yeti/generic/range.hpp"
+#include "yeti/core/flat_variant.hpp"
 #include "yeti/generic/trivial.hpp"
 
 using SV = std::string_view;
 
 using namespace std::literals;
 using namespace yeti;
+
+flat_variant<int> x;
 
 // =====
 // =====

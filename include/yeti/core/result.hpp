@@ -18,6 +18,11 @@ concept error = std::movable<E> && requires (E e) {
   { e.what() } -> either<std::string, std::string_view>;
 };
 
+template <typename E>
+concept error_view = error<E> && requires (E e) {
+  { e.what() } -> std::same_as<std::string_view>;
+};
+
 /**
  * @brief The result of invoking a yeti parser.
  *
