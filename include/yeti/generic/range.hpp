@@ -9,6 +9,7 @@
 #include <concepts>
 
 #include "yeti/core.hpp"
+#include "yeti/core/flat_variant.hpp"
 #include "yeti/core/generics.hpp"
 #include "yeti/core/parser_fn.hpp"
 #include "yeti/generic/trivial.hpp"
@@ -17,16 +18,9 @@ namespace yeti {
 
 namespace impl::any_impl {
 
-template <error Err>
-struct err final {
-
-  [[no_unique_address]] flat_variant<eos_impl::err, Err> err;
-
-  [[nodiscard]] constexpr auto
-  what(this auto &&self) noexcept -> std::string_view {
-    return YETI_FWD(self).err.visit([](auto &&e) {
-      return std::format("Satisfy, predicate failed with: {}", e.what());
-    });
+struct eos {
+  [[nodiscard]] static constexpr auto what() noexcept -> std::string_view {
+    return "Satisfy expects a token";
   }
 };
 
@@ -34,7 +28,7 @@ struct err final {
  * @brief The result of accessing `t.fn` when `t` is a `T`.
  */
 template <typename T>
-using fwd_fn_t = decltype(std::declval<T>().fn);
+using forward_fn_t = decltype(std::declval<T>().fn);
 
 // template <typename T, typename... Args>
 // concept inner_indirectly_invocable =
@@ -43,7 +37,7 @@ using fwd_fn_t = decltype(std::declval<T>().fn);
  * @brief The result of invoking `t.fn` with `Args...` when `t` is a `T`.
  */
 template <typename T, typename... Args>
-using fn_result_t = std::invoke_result_t<fwd_fn_t<T>, Args...>;
+using fn_result_t = std::invoke_result_t<forward_fn_t<T>, Args...>;
 
 template <typename F>
 struct satisfy final {
@@ -52,50 +46,51 @@ struct satisfy final {
 
   [[no_unique_address]] F fn;
 
-  [[nodiscard]] constexpr satisfy() noexcept = default;
-
   template <typename Self, storable S>
-  // requires that fn is invocable with S to an expected<unit, E>
+  // Require that stream is a recombinant range
+  // requires that fn is invocable with I to an expected<T, error>
   constexpr auto
   operator()(this Self &&self, S &&stream) -> specialization_of<result> auto {
 
     using I = std::ranges::iterator_t<S>;
-    using V = std::iter_value_t<I>;
-
-    using R = fn_result_t<Self, V &>;
+    using R = std::indirect_result_t<forward_fn_t<Self>, I>;
 
     static_assert(specialization_of<R, std::expected>);
 
-    using Err = typename R::error_type;
-    using Result = resulting_t<V, V, err<Err>>;
-    using Exp = Result::expected_type;
+    using V = R::value_type;
+    using E = R::error_type;
+
+    using Err = flat_variant<eos, E>;
+    using Res = resulting_t<S, V, Err>;
+    using Exp = Res::expected_type;
 
     auto beg = std::ranges::begin(stream);
     auto end = std::ranges::end(stream);
 
     if (beg == end) {
-      return Result{YETI_FWD(stream), Exp{std::unexpect, Err{}}};
+      return Res{YETI_FWD(stream), Exp{std::unexpect, eos{}}};
     }
 
-    V val = *beg;
-    ++beg;
-    auto pred = YETI_FWD(self).fn(val);
+    auto pred = YETI_FWD(self).fn(beg);
 
-    if (!pred) {
-      return Result{
-          strip<S>{std::move(beg), std::move(end)},
-          Exp{std::unexpect, Err{{std::move(pred).error()}}},
-      };
+    beg = std::next(std::move(beg));
+
+    if (pred) {
+      return Res{{std::move(beg), std::move(end)}, {std::move(pred).value()}};
     }
 
-    return Result{
-        strip<S>{std::move(beg), std::move(end)},
-        {std::move(val)},
+    return Res{
+        {std::move(beg), std::move(end)},
+        Exp{std::unexpect, Err{std::move(pred).error()}},
     };
   }
 };
 
 } // namespace impl::any_impl
+
+inline constexpr auto satisfy = []<typename F>(F &&fn) static {
+  return combinate(lift(impl::any_impl::satisfy<strip<F>>{YETI_FWD(fn)}));
+};
 
 } // namespace yeti
 

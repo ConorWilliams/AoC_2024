@@ -10,8 +10,8 @@
 #include <variant>
 
 #include "yeti/core.hpp"
-// #include "yeti/generic/range.hpp"
 #include "yeti/core/flat_variant.hpp"
+#include "yeti/generic/range.hpp"
 #include "yeti/generic/trivial.hpp"
 
 using SV = std::string_view;
@@ -19,21 +19,32 @@ using SV = std::string_view;
 using namespace std::literals;
 using namespace yeti;
 
-flat_variant<int> x;
-
-// =====
-// =====
-// =====
-// =====
-// =====
-// =====
-// =====
-// =====
-// =====
-
 struct errr {
   static auto what() -> std::string_view { return "err"; }
 };
+
+constexpr auto lit = satisfy([](auto &&x) static -> std::expected<int, errr> {
+  if (*x == 'c') {
+    return 'c';
+  }
+  return std::unexpected(errr{});
+});
+
+constexpr auto o = lit("hj"sv);
+
+static_assert(!o);
+
+// =====
+// =====
+// =====
+// =====
+// =====
+// =====
+// =====
+// =====
+// =====
+
+flat_variant<int> x;
 
 struct to_lift_never1 {
   static constexpr auto operator()(SV x) -> result<SV, never, errr> {
