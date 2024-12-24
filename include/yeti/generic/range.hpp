@@ -1,8 +1,10 @@
 #ifndef BCC882F7_ED8D_4A23_B468_977755EA6D56
 #define BCC882F7_ED8D_4A23_B468_977755EA6D56
 
+#include <expected>
 #include <format>
 #include <iterator>
+#include <ranges>
 #include <utility>
 #include <variant>
 
@@ -16,11 +18,24 @@
 
 namespace yeti {
 
+template <typename T>
+concept recombinant_range = storable<T> && std::ranges::range<T> &&
+                            std::constructible_from<strip<T>,
+                                                    std::ranges::iterator_t<T>,
+                                                    std::ranges::sentinel_t<T>>;
+template <typename T>
+concept recombinant_input_range =
+    std::ranges::input_range<T> && recombinant_range<T>;
+
+template <typename T>
+concept recombinant_forward_range =
+    std::ranges::forward_range<T> && recombinant_range<T>;
+
 namespace impl::any_impl {
 
 struct eos {
   [[nodiscard]] static constexpr auto what() noexcept -> std::string_view {
-    return "Satisfy expects a token";
+    return "Satisfy expects a token but got end of stream";
   }
 };
 
@@ -30,25 +45,26 @@ struct eos {
 template <typename T>
 using forward_fn_t = decltype(std::declval<T>().fn);
 
-// template <typename T, typename... Args>
-// concept inner_indirectly_invocable =
+template <typename F, typename I>
+concept expected_invocable_help =
+    std::indirectly_unary_invocable<F, I> &&
+    specialization_of<std::indirect_result_t<F, I>, std::expected> &&
+    error<typename std::indirect_result_t<F, I>::error_type>;
 
-/**
- * @brief The result of invoking `t.fn` with `Args...` when `t` is a `T`.
- */
-template <typename T, typename... Args>
-using fn_result_t = std::invoke_result_t<forward_fn_t<T>, Args...>;
+template <typename Self, typename R>
+concept expected_invocable =
+    expected_invocable_help<forward_fn_t<Self>, std::ranges::iterator_t<R>>;
 
-template <typename F>
+/* F must be copy constructible such that we can satisfy parser_fn */
+template <std::copy_constructible F>
 struct satisfy final {
 
   static_assert(std::same_as<F, strip<F>>);
 
   [[no_unique_address]] F fn;
 
-  template <typename Self, storable S>
-  // Require that stream is a recombinant range
-  // requires that fn is invocable with I to an expected<T, error>
+  template <typename Self, typename S>
+    requires recombinant_input_range<S> && expected_invocable<Self, S>
   constexpr auto
   operator()(this Self &&self, S &&stream) -> specialization_of<result> auto {
 
@@ -88,6 +104,9 @@ struct satisfy final {
 
 } // namespace impl::any_impl
 
+/**
+ * @brief Build a parser from a function that matches a single token.
+ */
 inline constexpr auto satisfy = []<typename F>(F &&fn) static {
   return combinate(lift(impl::any_impl::satisfy<strip<F>>{YETI_FWD(fn)}));
 };
