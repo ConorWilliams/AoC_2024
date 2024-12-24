@@ -21,7 +21,7 @@ namespace yeti {
  * This macro is not semantically variadic but the ``...`` allows commas in
  * the macro argument.
  */
-#define YETI_HOF(...)                                                          \
+#define YETI_HOF(...)                                                                    \
   noexcept(noexcept(__VA_ARGS__))->decltype(__VA_ARGS__) { return __VA_ARGS__; }
 
 /**
@@ -54,12 +54,10 @@ template <typename T, typename U>
 concept same_as_stripped = std::same_as<strip<T>, strip<U>>;
 
 template <typename T>
-concept storable =
-    std::movable<strip<T>> && std::is_constructible_v<strip<T>, T>;
+concept storable = std::movable<strip<T>> && std::is_constructible_v<strip<T>, T>;
 
 template <typename T>
-concept nothrow_storable =
-    storable<T> && std::is_nothrow_constructible_v<strip<T>, T>;
+concept nothrow_storable = storable<T> && std::is_nothrow_constructible_v<strip<T>, T>;
 
 namespace impl {
 
@@ -75,7 +73,7 @@ struct specialization_of_concept<U<Ts...>, U> : std::true_type {};
  * @brief Test if a type is a (type) specialization of a template.
  */
 template <typename T, template <typename...> typename U>
-concept specialization_of = impl::specialization_of_concept<T, U>::value;
+concept specialization_of = impl::specialization_of_concept<strip<T>, U>::value;
 
 namespace impl {
 
