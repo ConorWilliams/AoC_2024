@@ -70,6 +70,8 @@ struct satisfy final {
 
   [[no_unique_address]] F fn;
 
+  // TODO: Make specializations for skip and drop
+
   template <typename Self, typename S>
     requires recombinant_input_range<S> && expected_invocable<Self, S>
   [[nodiscard]] constexpr auto
