@@ -30,19 +30,17 @@ struct err {
 #undef WHAT
 };
 
-template <typename P, error D>
+template <parser P, error D>
 struct described;
 
 template <typename P, typename D>
 [[nodiscard]] constexpr auto describe(P &&p, D &&desc)
     YETI_HOF(described<strip<P>, strip<D>>{YETI_FWD(p), YETI_FWD(desc)})
 
-// P is a parser
-template <typename P, error D>
+template <parser P, error D>
 struct described {
 
   static_assert(std::same_as<P, strip<P>>);
-  static_assert(std::same_as<D, strip<D>>);
 
   using type = type_of<P>;
 

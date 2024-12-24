@@ -9,6 +9,7 @@ namespace yeti {
 namespace impl::parser_combinator {
 
 template <typename P>
+  requires parser<P>
 struct combinator;
 
 }

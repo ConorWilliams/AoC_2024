@@ -15,6 +15,7 @@ namespace yeti {
 namespace impl::parser_combinator {
 
 template <typename P>
+  requires parser<P>
 struct combinator;
 
 template <typename P>
@@ -29,6 +30,7 @@ template <specialization_of<combinator> P>
 }
 
 template <typename P>
+  requires parser<P>
 struct combinator final {
 
   static_assert(std::same_as<P, strip<P>>);
