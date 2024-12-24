@@ -45,18 +45,22 @@ struct eos {
 template <typename T>
 using forward_fn_t = decltype(std::declval<T>().fn);
 
-template <typename R>
-concept expected_invocable_r =
-    specialization_of<R, std::expected> && error<typename R::error_type>;
+template <typename>
+struct expected_invocable_r_impl : std::false_type {};
 
-template <typename F, typename T>
-concept expected_invocable_help =
-    std::invocable<F, T> && expected_invocable_r<std::invoke_result_t<F, T>>;
+template <error E>
+struct expected_invocable_r_impl<std::expected<unit, E>> : std::true_type {};
+
+template <typename R>
+concept expected_invocable_r = expected_invocable_r_impl<R>::value;
+
+template <typename F, typename I>
+concept expected_invocable_help = std::indirectly_unary_invocable<F, I> &&
+                                  expected_invocable_r<std::indirect_result_t<F, I>>;
 
 template <typename Self, typename R>
 concept expected_invocable =
-    expected_invocable_help<forward_fn_t<Self>,
-                            std::iter_reference_t<std::ranges::iterator_t<R>>>;
+    expected_invocable_help<forward_fn_t<Self>, std::ranges::iterator_t<R>>;
 
 /* F must be copy constructible such that we can satisfy parser_fn */
 template <std::copy_constructible F>
@@ -72,11 +76,8 @@ struct satisfy final {
   operator()(this Self &&self, S &&stream) -> specialization_of<result> auto {
 
     using I = std::ranges::iterator_t<S>;
+    using V = std::iter_value_t<I>;
     using R = std::indirect_result_t<forward_fn_t<Self>, I>;
-
-    static_assert(specialization_of<R, std::expected>);
-
-    using V = R::value_type;
     using E = R::error_type;
 
     using Err = flat_variant<eos, E>;
@@ -100,17 +101,21 @@ struct satisfy final {
       }
     }
 
-    if (auto pred = std::invoke(YETI_FWD(self).fn, *beg)) {
+    V tok = *beg;
+
+    std::expected pred = std::invoke(YETI_FWD(self).fn, tok);
+
+    if (pred) {
       return Res{
           {std::next(std::move(beg)), std::move(end)},
-          {std::move(pred).value()},
-      };
-    } else {
-      return Res{
-          YETI_FWD(stream),
-          Exp{std::unexpect, Err{std::move(pred).error()}},
+          {std::move(tok)},
       };
     }
+
+    return Res{
+        YETI_FWD(stream),
+        Exp{std::unexpect, Err{std::move(pred).error()}},
+    };
   }
 };
 
@@ -133,6 +138,7 @@ struct err {
     return "Expected literal={unformattable}";
   }
 };
+
 template <std::formattable<char> T>
 struct err<T> {
   [[no_unique_address]] T tok;
@@ -149,17 +155,13 @@ struct lit {
 
   [[no_unique_address]] T tok;
 
-  template <typename Self, typename It>
-  [[nodiscard]] constexpr auto operator()(this Self &&self, It it)
-      -> std::expected<strip<std::iter_reference_t<It>>, err<T>>
-    requires requires {
-      true;
-      /*{ *it == self.tok } -> std::convertible_to<bool>;*/
+  template <std::equality_comparable_with<T> U>
+  [[nodiscard]] constexpr auto
+  operator()(this auto &&self, U &&val) -> std::expected<unit, err<T>> {
+    if (val == self.tok) {
+      return {};
     }
-  {
-    if (*it == self.tok) {
-      return {*it};
-    }
+    return std::expected<unit, err<T>>{std::unexpect, YETI_FWD(self).tok};
   }
 };
 

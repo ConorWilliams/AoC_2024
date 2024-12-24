@@ -3,6 +3,7 @@
 #include <concepts>
 #include <expected>
 #include <iostream>
+#include <print>
 #include <ranges>
 #include <string_view>
 #include <type_traits>
@@ -23,9 +24,9 @@ struct errr {
   static auto what() -> std::string_view { return "err"; }
 };
 
-constexpr auto llit = satisfy([](auto &&x) static -> std::expected<int, errr> {
+constexpr auto llit = satisfy([](auto &&x) static -> std::expected<unit, errr> {
   if (x == 'c') {
-    return 'c';
+    return {};
   }
   return std::unexpected(errr{});
 });
@@ -134,8 +135,7 @@ static_assert(parser_fn<decltype(pp), std::string_view>);
 
 constexpr auto p = lift(x).skip().mute();
 constexpr std::string_view sv{"hello"};
-static_assert(
-    specialization_of<rebind<decltype(x), std::string_view, unit>, result>);
+static_assert(specialization_of<rebind<decltype(x), std::string_view, unit>, result>);
 
 static_assert(parser_fn<decltype(pp), std::string_view>);
 
@@ -144,8 +144,7 @@ constexpr auto y = p(sv);
 static_assert(y.expected.value() == unit{});
 
 struct half { //
-  static auto
-  operator()(std::string_view sv) -> result<std::string_view, char, unit> {
+  static auto operator()(std::string_view sv) -> result<std::string_view, char, unit> {
     if (sv.starts_with("h")) {
       return {sv.substr(1), 'h'};
     }
@@ -353,9 +352,17 @@ int main() {
 
   cons();
 
+  std::vector<int> data = {int('c'), 1, 2, 3};
+
   constexpr auto parser = lit('c');
 
-  auto [rem, res] = parser("hello"sv);
+  auto [rem, res] = parser(data);
+
+  if (res) {
+    std::println("Got {}, remainder {}", res.value(), 2);
+  } else {
+    std::println("Error: {}", res.error().what());
+  }
 
   return 0;
 }
