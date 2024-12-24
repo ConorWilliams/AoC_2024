@@ -39,7 +39,7 @@ struct flat_variant final {
     requires (error<T> && ...)
   [[nodiscard]] constexpr auto what(this Self &&self)
       YETI_HOF(YETI_FWD(self).visit([](auto &&val) static -> std::string {
-        return YETI_FWD(val).what();
+        return std::string{YETI_FWD(val).what()};
       }))
 
   template <typename Self>
@@ -90,8 +90,7 @@ struct merge_flat<list<U...>, T, Ts...> : merge_flat<list<U..., T>, Ts...> {};
 // Specializations for concat to speed up matching
 
 template <typename... Ls, typename... Ts>
-struct merge_flat<list<>, flat_variant<Ls...>, Ts...>
-    : merge_flat<list<Ls...>, Ts...> {};
+struct merge_flat<list<>, flat_variant<Ls...>, Ts...> : merge_flat<list<Ls...>, Ts...> {};
 
 template <typename L, typename... Rs, typename... Ts>
 struct merge_flat<list<>, L, flat_variant<Rs...>, Ts...>
