@@ -1,6 +1,6 @@
 ---
 Language: Cpp
-ColumnLimit: 80
+ColumnLimit: 90
 IndentPPDirectives: BeforeHash
 AlwaysBreakTemplateDeclarations : true
 PackConstructorInitializers : CurrentLine

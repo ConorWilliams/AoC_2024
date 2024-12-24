@@ -23,14 +23,14 @@ struct errr {
   static auto what() -> std::string_view { return "err"; }
 };
 
-constexpr auto lit = satisfy([](auto &&x) static -> std::expected<int, errr> {
-  if (*x == 'c') {
+constexpr auto llit = satisfy([](auto &&x) static -> std::expected<int, errr> {
+  if (x == 'c') {
     return 'c';
   }
   return std::unexpected(errr{});
 });
 
-constexpr auto o = lit("hj"sv);
+constexpr auto o = llit("hj"sv);
 
 static_assert(!o);
 
@@ -352,6 +352,10 @@ int main() {
   tell();
 
   cons();
+
+  constexpr auto parser = lit('c');
+
+  auto [rem, res] = parser("hello"sv);
 
   return 0;
 }
