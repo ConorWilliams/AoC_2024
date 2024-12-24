@@ -2,14 +2,13 @@
 #define EFAF34CE_6AFE_403C_AA49_FBDC9BC80BB7
 
 #include "yeti/core/generics.hpp"
-#include <yeti/core/parser.hpp>
+#include "yeti/core/parser.hpp"
 
 namespace yeti {
 
 namespace impl::parser_combinator {
 
 template <typename P>
-  requires parser<P>
 struct combinator;
 
 }
@@ -19,16 +18,14 @@ struct combinator;
  */
 template <typename P, typename S = void, typename T = void, typename E = void>
 concept combinator =
-    parser<P> &&
-    specialization_of<strip<P>, impl::parser_combinator::combinator>;
+    parser<P> && specialization_of<P, impl::parser_combinator::combinator>;
 
 /**
  * @brief An extension of `parser_like` extended to `combinator`.
  */
 template <typename P, typename Q>
 concept combinator_like =
-    parser_fn<Q> &&
-    combinator<P, type_of<Q>, parse_value_t<Q>, parse_error_t<Q>>;
+    parser_fn<Q> && combinator<P, type_of<Q>, parse_value_t<Q>, parse_error_t<Q>>;
 
 // ===  === //
 // ===  === //

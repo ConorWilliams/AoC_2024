@@ -352,16 +352,33 @@ int main() {
 
   cons();
 
-  std::vector<int> data = {int('c'), 1, 2, 3};
+  constexpr auto parser = lit(4).desc(errr{}).skip();
+  //
 
-  constexpr auto parser = lit('c');
+  // constexpr auto cc = combinate(parser);
 
-  auto [rem, res] = parser(data);
+  {
+    std::vector<int> data = {1, 1, 2, 3};
 
-  if (res) {
-    std::println("Got {}, remainder {}", res.value(), 2);
-  } else {
-    std::println("Error: {}", res.error().what());
+    auto [rem, res] = parser(data);
+
+    if (res) {
+      std::println("Got {}, remainder {}", res.value(), 2);
+    } else {
+      std::println("{}", res.error().what());
+    }
+  }
+
+  {
+    std::vector<int> data = {4, 1, 2, 3};
+
+    auto [rem, res] = parser(data);
+
+    if (res) {
+      std::println("Got {}, remainder {}", res.value(), 2);
+    } else {
+      std::println("{}", res.error().what());
+    }
   }
 
   return 0;

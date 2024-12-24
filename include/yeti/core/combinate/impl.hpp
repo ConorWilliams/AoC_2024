@@ -5,15 +5,30 @@
 #include <functional>
 
 #include "yeti/core/generics.hpp"
+#include "yeti/core/parser.hpp"
 #include "yeti/core/typed.hpp"
-#include <yeti/core/parser.hpp>
+
+#include "yeti/core/combinate/desc.hpp"
 
 namespace yeti {
 
 namespace impl::parser_combinator {
 
 template <typename P>
-  requires parser<P>
+struct combinator;
+
+template <typename P>
+[[nodiscard]] constexpr auto
+recombinate(P &&parser) noexcept(nothrow_storable<P>) -> combinator<strip<P>> {
+  return {YETI_FWD(parser)};
+}
+
+template <specialization_of<combinator> P>
+[[nodiscard]] constexpr auto recombinate(P &&parser) noexcept -> P && {
+  return YETI_FWD(parser);
+}
+
+template <typename P>
 struct combinator final {
 
   static_assert(std::same_as<P, strip<P>>);
@@ -37,7 +52,7 @@ struct combinator final {
    * original but returns `unit` as its value type.
    */
   [[nodiscard]] constexpr auto skip(this auto &&self)
-      YETI_HOF(combinate(YETI_FWD(self).fn.skip()))
+      YETI_HOF(recombinate(YETI_FWD(self).fn.skip()))
 
   /**
    * @brief Ignore the error of a parser.
@@ -46,17 +61,22 @@ struct combinator final {
    * original but returns `unit` as its error type.
    */
   [[nodiscard]] constexpr auto mute(this auto &&self)
-      YETI_HOF(combinate(YETI_FWD(self).fn.mute()))
+      YETI_HOF(recombinate(YETI_FWD(self).fn.mute()))
 
   /**
    * @brief The same as `.skip().mute()`.
    */
   [[nodiscard]] constexpr auto drop(this auto &&self)
-      YETI_HOF(combinate(YETI_FWD(self).fn.skip().mute()))
+      YETI_HOF(recombinate(YETI_FWD(self).fn.skip().mute()))
 
   // ===  === //
   // ===  === //
   // ===  === //
+
+  template <storable E>
+    requires error<strip<E>>
+  [[nodiscard]] constexpr auto desc(this auto &&self, E &&err)
+      YETI_HOF(recombinate(desc::describe(YETI_FWD(self).fn, YETI_FWD(err))))
 };
 
 } // namespace impl::parser_combinator
