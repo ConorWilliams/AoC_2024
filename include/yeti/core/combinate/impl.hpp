@@ -9,6 +9,7 @@
 #include "yeti/core/typed.hpp"
 
 #include "yeti/core/combinate/desc.hpp"
+#include "yeti/core/combinate/typed.hpp"
 
 namespace yeti {
 
@@ -79,6 +80,17 @@ struct combinator final {
     requires error<strip<E>>
   [[nodiscard]] constexpr auto desc(this auto &&self, E &&err)
       YETI_HOF(recombinate(desc::describe(YETI_FWD(self).fn, YETI_FWD(err))))
+
+  // TODO: Describe with a static string
+
+  // ===  === //
+  // ===  === //
+  // ===  === //
+
+  template <typename Type>
+    requires pure_void<type> && std::same_as<Type, strip<Type>>
+  [[nodiscard]] constexpr auto typed(this auto &&self)
+      YETI_HOF(recombinate(typed::with_type<Type>(YETI_FWD(self).fn)))
 };
 
 } // namespace impl::parser_combinator

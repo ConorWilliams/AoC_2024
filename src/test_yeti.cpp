@@ -360,7 +360,7 @@ int main() {
   {
     std::vector<int> data = {1, 1, 2, 3};
 
-    auto [rem, res] = parser(data);
+    auto [rem, res] = parser(std::span{data});
 
     if (res) {
       std::println("Got {}, remainder {}", res.value(), 2);
@@ -372,7 +372,7 @@ int main() {
   {
     std::vector<int> data = {4, 1, 2, 3};
 
-    auto [rem, res] = parser(data);
+    auto [rem, res] = parser(std::span{data});
 
     if (res) {
       std::println("Got {}, remainder {}", res.value(), 2);

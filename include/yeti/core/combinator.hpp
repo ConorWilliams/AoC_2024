@@ -1,18 +1,11 @@
 #ifndef EFAF34CE_6AFE_403C_AA49_FBDC9BC80BB7
 #define EFAF34CE_6AFE_403C_AA49_FBDC9BC80BB7
 
+#include "yeti/core/combinate/impl.hpp"
 #include "yeti/core/generics.hpp"
 #include "yeti/core/parser.hpp"
 
 namespace yeti {
-
-namespace impl::parser_combinator {
-
-template <typename P>
-  requires parser<P>
-struct combinator;
-
-}
 
 /**
  * @brief The highest level of the parser concept hierarchy.
@@ -32,20 +25,10 @@ concept combinator_like =
 // ===  === //
 // ===  === //
 
-namespace impl {
-
-template <typename P>
-using combinate_t = parser_combinator::combinator<strip<P>>;
-
-}
-
 // NOTE: `combinate` could include an overload for parser_fn, but it hurts
 // compile times due to the constant need to disambiguate between the
 // `parser`/`parser_fn`/`combinator` which is quite a hard subsumption
 // problem for the compiler to resolve.
-
-// NOTE: Unlike `lift` combinate must have a non-deduced return type, this
-// allows `combinator` to call it without triggering infinite recursion.
 
 /**
  * @brief ...
@@ -53,8 +36,8 @@ using combinate_t = parser_combinator::combinator<strip<P>>;
 template <typename P>
   requires parser<P>
 [[nodiscard]] constexpr auto
-combinate(P &&parser) noexcept(nothrow_storable<P>) -> impl::combinate_t<P> {
-  return {YETI_FWD(parser)};
+combinate(P &&parser) noexcept(nothrow_storable<P>) -> combinator_like<P> auto {
+  return impl::parser_combinator::combinator<strip<P>>{YETI_FWD(parser)};
 }
 
 template <typename P>
@@ -64,7 +47,5 @@ template <typename P>
 }
 
 } // namespace yeti
-
-#include "yeti/core/combinate/impl.hpp"
 
 #endif /* EFAF34CE_6AFE_403C_AA49_FBDC9BC80BB7 */
